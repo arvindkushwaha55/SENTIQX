@@ -26,7 +26,8 @@ export function Consent({
         <List items={d.consent.monitored} color="var(--s-working)" mark="+" />
         <List items={d.consent.notMonitored} color="var(--muted)" mark="-" />
 
-        <p className="mt-3 text-xs text-[var(--muted)]">{d.consent.local}</p>
+        <p className="mt-3 text-xs text-[var(--text)]">{d.consent.changes}</p>
+        <p className="mt-1 text-xs text-[var(--muted)]">{d.consent.local}</p>
         <p className="mt-1 text-xs text-[var(--muted)]">{d.consent.external}</p>
 
         <div className="mt-4 flex gap-2">

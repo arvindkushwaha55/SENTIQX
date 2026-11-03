@@ -1,16 +1,25 @@
-import { useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import "./App.css";
 import { Consent } from "./components/Consent";
 import { DemoBar } from "./components/DemoBar";
 import { MainView } from "./components/MainView";
 import { HistoryView, SettingsView } from "./components/SecondaryViews";
 import { BackIcon, Button, ClockIcon, GearIcon, IconButton, Pill } from "./components/ui";
-import { CONNECTOR_READY } from "./lib/config";
+import {
+  type ConnectorStatus,
+  connectorStatus,
+  onActivity,
+  pickProjectFolder,
+  setPaused,
+  startMonitoring,
+  stopMonitoring,
+} from "./lib/connector";
 import { deriveStatus, initialState, reducer } from "./lib/engine";
-import { useLanguage, useNow, usePinned } from "./lib/hooks";
+import { loadLastProject, saveLastProject, useLanguage, useNow, usePinned } from "./lib/hooks";
 import { dictionaries } from "./lib/i18n";
 
 type View = "main" | "history" | "settings";
+const NO_EVENTS_HINT_AFTER_MS = 20_000;
 
 function App() {
   const [lang, setLang] = useLanguage();
@@ -19,14 +28,81 @@ function App() {
   const [view, setView] = useState<View>("main");
   const [askConsent, setAskConsent] = useState(false);
   const [demo, setDemo] = useState(false);
+  const [connector, setConnector] = useState<ConnectorStatus | null>(null);
+  const [project, setProject] = useState<string | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const now = useNow();
 
   const d = dictionaries[lang];
   const status = useMemo(() => deriveStatus(state, now), [state, now]);
-  const canStart = CONNECTOR_READY || demo;
+  const canStart = Boolean(connector?.listening) || demo;
+  const showNoEventsHint =
+    !demo &&
+    state.monitor === "on" &&
+    state.lastEventAt === null &&
+    startedAt !== null &&
+    now - startedAt > NO_EVENTS_HINT_AFTER_MS;
 
-  const act = (action: "start" | "pause" | "resume" | "stop") =>
-    dispatch({ type: "monitor", action, at: Date.now() });
+  useEffect(() => {
+    connectorStatus()
+      .then(setConnector)
+      .catch(() => setConnector({ listening: false, port: 0, error: null }));
+  }, []);
+
+  // Real activity from the Rust receiver. The engine itself ignores events unless monitoring is on.
+  useEffect(() => onActivity((event) => dispatch({ type: "event", event })), []);
+
+  const act = useCallback(
+    (action: "start" | "pause" | "resume" | "stop") =>
+      dispatch({ type: "monitor", action, at: Date.now() }),
+    [],
+  );
+
+  const begin = async () => {
+    setAskConsent(false);
+    setError(null);
+    if (demo) {
+      act("start");
+      return;
+    }
+    try {
+      const folder = await pickProjectFolder(d.pickFolderTitle, loadLastProject() ?? undefined);
+      if (!folder) return;
+      // Turn the engine on first so the very first event cannot be missed.
+      act("start");
+      try {
+        await startMonitoring(folder);
+      } catch (e) {
+        act("stop");
+        throw e;
+      }
+      saveLastProject(folder);
+      setProject(folder);
+      setStartedAt(Date.now());
+    } catch (e) {
+      setError(d.startFailed(String(e)));
+    }
+  };
+
+  const control = async (action: "pause" | "resume" | "stop") => {
+    setError(null);
+    try {
+      if (!demo) {
+        if (action === "stop") await stopMonitoring();
+        else await setPaused(action === "pause");
+      }
+    } catch (e) {
+      setError(d.startFailed(String(e)));
+      return;
+    }
+    act(action);
+    if (action === "resume") setStartedAt(Date.now());
+    if (action === "stop") {
+      setProject(null);
+      setStartedAt(null);
+    }
+  };
 
   return (
     <div className="relative flex h-full flex-col">
@@ -80,7 +156,17 @@ function App() {
       )}
 
       <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-3">
-        {view === "main" && <MainView d={d} s={state} status={status} now={now} />}
+        {view === "main" && (
+          <MainView
+            d={d}
+            s={state}
+            status={status}
+            now={now}
+            project={demo ? null : project}
+            hint={showNoEventsHint ? d.noEventsHint : null}
+            error={error}
+          />
+        )}
         {view === "settings" && (
           <SettingsView d={d} lang={lang} setLang={setLang} pinned={pinned} togglePin={togglePin} />
         )}
@@ -95,19 +181,22 @@ function App() {
                 {d.controls.start}
               </Button>
               {!canStart && (
-                <p className="mt-2 text-center text-xs text-[var(--muted)]">{d.connectorNotReady}</p>
+                <p className="mt-2 text-center text-xs text-[var(--muted)]">
+                  {d.connectorNotReady}
+                  {connector?.error ? ` (${connector.error})` : ""}
+                </p>
               )}
             </>
           ) : (
             <div className="flex gap-2">
               {state.monitor === "on" ? (
-                <Button onClick={() => act("pause")}>{d.controls.pause}</Button>
+                <Button onClick={() => void control("pause")}>{d.controls.pause}</Button>
               ) : (
-                <Button variant="primary" onClick={() => act("resume")}>
+                <Button variant="primary" onClick={() => void control("resume")}>
                   {d.controls.resume}
                 </Button>
               )}
-              <Button variant="danger" onClick={() => act("stop")}>
+              <Button variant="danger" onClick={() => void control("stop")}>
                 {d.controls.stop}
               </Button>
             </div>
@@ -120,8 +209,8 @@ function App() {
           <button
             type="button"
             onClick={() => {
+              if (demo) void control("stop");
               setDemo((v) => !v);
-              if (demo) act("stop");
             }}
             className="absolute bottom-1 right-2 text-[10px] text-[var(--muted)] opacity-60 hover:opacity-100"
           >
@@ -132,14 +221,7 @@ function App() {
       )}
 
       {askConsent && (
-        <Consent
-          d={d}
-          onCancel={() => setAskConsent(false)}
-          onAllow={() => {
-            setAskConsent(false);
-            act("start");
-          }}
-        />
+        <Consent d={d} onCancel={() => setAskConsent(false)} onAllow={() => void begin()} />
       )}
     </div>
   );

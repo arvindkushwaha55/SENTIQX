@@ -18,6 +18,9 @@ function write(key: string, value: string) {
   }
 }
 
+export const loadLastProject = (): string | null => read("sentiqx.lastProject");
+export const saveLastProject = (p: string) => write("sentiqx.lastProject", p);
+
 /** Ticks so time-based status (suspected stuck) re-evaluates without new events. */
 export function useNow(intervalMs = 5000): number {
   const [now, setNow] = useState(() => Date.now());

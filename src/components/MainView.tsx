@@ -8,7 +8,12 @@ interface Props {
   s: SessionState;
   status: Status | null;
   now: number;
+  project: string | null;
+  hint: string | null;
+  error: string | null;
 }
+
+const folderName = (p: string) => p.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || p;
 
 const COLOR: Record<Status, string> = {
   working: "var(--s-working)",
@@ -18,7 +23,7 @@ const COLOR: Record<Status, string> = {
   done: "var(--s-done)",
 };
 
-export function MainView({ d, s, status, now }: Props) {
+export function MainView({ d, s, status, now, project, hint, error }: Props) {
   const summary = buildSummary(s, status, now, d);
   const err = buildErrorView(s, d);
   const color = status ? COLOR[status] : "var(--muted)";
@@ -44,8 +49,19 @@ export function MainView({ d, s, status, now }: Props) {
           </div>
           <MonitorBadge d={d} s={s} />
         </div>
+        {project && s.monitor !== "off" && (
+          <p className="mt-2 truncate text-xs text-[var(--muted)]" title={project}>
+            {d.projectLabel}: {folderName(project)}
+          </p>
+        )}
         {s.monitor === "paused" && (
           <p className="mt-2 text-xs text-[var(--muted)]">{d.pausedNote}</p>
+        )}
+        {hint && <p className="mt-2 text-xs text-[var(--s-waiting)]">{hint}</p>}
+        {error && (
+          <p className="mt-2 break-words text-xs text-[var(--s-error)]" role="alert">
+            {error}
+          </p>
         )}
       </Card>
 

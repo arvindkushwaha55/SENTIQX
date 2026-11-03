@@ -15,6 +15,10 @@ export interface Dict {
   nav: { history: string; settings: string; back: string };
   controls: { start: string; pause: string; resume: string; stop: string };
   connectorNotReady: string;
+  startFailed: (reason: string) => string;
+  pickFolderTitle: string;
+  projectLabel: string;
+  noEventsHint: string;
   pausedNote: string;
   demoBanner: string;
   pin: { on: string; off: string; onHint: string; offHint: string };
@@ -23,6 +27,7 @@ export interface Dict {
     intro: string;
     monitored: string[];
     notMonitored: string[];
+    changes: string;
     local: string;
     external: string;
     allow: string;
@@ -96,7 +101,12 @@ const en: Dict = {
   nav: { history: "History", settings: "Settings", back: "Back" },
   controls: { start: "Start monitoring", pause: "Pause", resume: "Resume", stop: "Stop" },
   connectorNotReady:
-    "The Claude Code connection is not set up yet, so monitoring cannot start.",
+    "SENTIQX could not open its local receiver, so monitoring cannot start.",
+  startFailed: (r) => `Could not start monitoring: ${r}`,
+  pickFolderTitle: "Choose the project folder to monitor",
+  projectLabel: "Project",
+  noEventsHint:
+    "No events received yet. Send a message to Claude in this project. Some Claude Code versions may not run hooks in the VS Code panel.",
   pausedNote: "Paused. Nothing is recorded until you resume.",
   demoBanner: "DEMO DATA - not real Claude activity",
   pin: {
@@ -118,6 +128,8 @@ const en: Dict = {
       "Your screen (no screenshots or recordings)",
       "Your prompts and file contents are not saved",
     ],
+    changes:
+      "To listen, SENTIQX adds temporary hooks to .claude/settings.local.json in the project you pick, and removes them when you stop or close it.",
     local: "Stays on this computer: activity, history and settings.",
     external:
       "Sent outside only if you turn on AI summaries, after secrets are removed. Removal is not perfect.",
@@ -261,7 +273,12 @@ const hinglish: Dict = {
     stop: "Stop",
   },
   connectorNotReady:
-    "Claude Code ka connection abhi set nahi hai, isliye monitoring shuru nahi ho sakti.",
+    "SENTIQX apna local receiver nahi khol paaya, isliye monitoring shuru nahi ho sakti.",
+  startFailed: (r) => `Monitoring shuru nahi ho paayi: ${r}`,
+  pickFolderTitle: "Jis project ko monitor karna hai, uska folder chuno",
+  projectLabel: "Project",
+  noEventsHint:
+    "Abhi tak koi event nahi aaya. Is project mein Claude ko ek message bhejo. Kuch Claude Code versions VS Code panel mein hooks nahi chalate.",
   pausedNote: "Paused hai. Resume karne tak kuch record nahi hoga.",
   demoBanner: "DEMO DATA - asli Claude activity nahi hai",
   pin: {
@@ -283,6 +300,8 @@ const hinglish: Dict = {
       "Aapki screen (koi screenshot ya recording nahi)",
       "Aapke prompts aur file ka content save nahi hota",
     ],
+    changes:
+      "Sunne ke liye SENTIQX aapke chune hue project ki .claude/settings.local.json mein temporary hooks jodta hai, aur Stop karne ya app band karne par unhe hata deta hai.",
     local: "Isi computer par rehta hai: activity, history aur settings.",
     external:
       "Bahar tabhi jata hai jab aap AI summaries on karoge, secrets hatane ke baad. Hatana perfect nahi hota.",

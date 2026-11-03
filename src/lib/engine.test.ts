@@ -76,6 +76,18 @@ describe("status engine", () => {
     expect(s.completed).toEqual({ Write: 2 });
   });
 
+  it("a cancelled tool is neither completed nor an error", () => {
+    const s = run([
+      { kind: "prompt", at: 1 },
+      { kind: "tool_start", at: 2, tool: "PowerShell", id: "c" },
+      { kind: "tool_end", at: 3, tool: "PowerShell", id: "c", ok: false, interrupted: true },
+    ]);
+    expect(s.completed).toEqual({});
+    expect(s.errors).toHaveLength(0);
+    expect(s.running).toEqual({});
+    expect(deriveStatus(s, 4)).toBe("working");
+  });
+
   it("an API error stays ERROR until the next prompt", () => {
     let s = run([{ kind: "prompt", at: 1 }, { kind: "api_error", at: 2, errorType: "rate_limit" }]);
     expect(deriveStatus(s, 3)).toBe("error");

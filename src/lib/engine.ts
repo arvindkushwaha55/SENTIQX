@@ -132,6 +132,10 @@ export function reducer(s: SessionState, a: Action): SessionState {
 
     case "tool_end": {
       const running = removeRunning(s.running, ev.tool, ev.id);
+      if (ev.interrupted) {
+        // Cancelled by the user: neither completed work nor an error.
+        return { ...base, running, waitingFor: null };
+      }
       if (ev.ok) {
         return {
           ...base,

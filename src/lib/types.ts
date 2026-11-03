@@ -12,7 +12,16 @@ export type ActivityEvent =
   | { kind: "session_start"; at: number }
   | { kind: "prompt"; at: number }
   | { kind: "tool_start"; at: number; tool: string; id?: string }
-  | { kind: "tool_end"; at: number; tool: string; id?: string; ok: boolean; error?: string }
+  | {
+      kind: "tool_end";
+      at: number;
+      tool: string;
+      id?: string;
+      ok: boolean;
+      /** The tool was cancelled (for example the user pressed Esc). Not a failure. */
+      interrupted?: boolean;
+      error?: string;
+    }
   | { kind: "permission_request"; at: number; tool: string }
   | { kind: "turn_stop"; at: number }
   | { kind: "api_error"; at: number; errorType: string; detail?: string }
