@@ -1,4 +1,4 @@
-//! End-to-end checks against a REAL `claude` CLI. Slow and uses the logged-in account,
+﻿//! End-to-end checks against a REAL `claude` CLI. Slow and uses the logged-in account,
 //! so they are ignored by default. Run with:
 //!   cargo test --test real_claude -- --ignored --test-threads=1 --nocapture
 
@@ -63,7 +63,7 @@ fn start_receiver(port: u16, token: &str) -> (receiver::Receiver, mpsc::Receiver
 fn real_session_events_arrive_in_order() {
     let dir = Scratch::new("live");
     let (r, rx) = start_receiver(47934, "e2e-token");
-    r.set_project(Some(dir.project()));
+    r.set_scope(receiver::Scope::Project(dir.project()));
     r.set_active(true);
     settings_hooks::install(&dir.0, &settings_hooks::hook_url(47934), "e2e-token").unwrap();
 
@@ -89,7 +89,7 @@ fn real_session_events_arrive_in_order() {
 fn real_tool_failure_is_reported_as_failed() {
     let dir = Scratch::new("fail");
     let (r, rx) = start_receiver(47935, "e2e-token");
-    r.set_project(Some(dir.project()));
+    r.set_scope(receiver::Scope::Project(dir.project()));
     r.set_active(true);
     settings_hooks::install(&dir.0, &settings_hooks::hook_url(47935), "e2e-token").unwrap();
 
@@ -118,10 +118,49 @@ fn claude_still_works_when_sentiqx_is_not_running() {
 fn claude_still_works_when_the_token_is_wrong() {
     let dir = Scratch::new("badtoken");
     let (r, rx) = start_receiver(47937, "right-token");
-    r.set_project(Some(dir.project()));
+    r.set_scope(receiver::Scope::Project(dir.project()));
     r.set_active(true);
     settings_hooks::install(&dir.0, &settings_hooks::hook_url(47937), "wrong-token").unwrap();
     let (ok, out, _) = run_claude(&dir, "Reply with just the word OK. Do not use tools.", "Write");
     assert!(ok && out.contains("OK"), "a 401 from SENTIQX must not break Claude");
     assert!(collect(&rx).is_empty(), "events with a wrong token must be dropped");
+}
+
+/// The app's no-folder path, without touching the real ~/.claude/settings.json: hooks are
+/// written with `install_file` to a temporary settings file and given to Claude with
+/// `--settings`. Whether Claude loads the real user-level file is checked by using the app.
+#[test]
+#[ignore]
+fn no_folder_scope_receives_events_and_the_settings_file_is_restored_exactly() {
+    let dir = Scratch::new("no-folder");
+    let holder = Scratch::new("settings-holder");
+    let file = holder.0.join("settings.json");
+    let original = "{\n  \"theme\":   \"dark\"\n}\n"; // odd spacing on purpose
+    std::fs::write(&file, original).unwrap();
+
+    let (r, rx) = start_receiver(47939, "e2e-token");
+    r.set_scope(receiver::Scope::All);
+    r.set_active(true);
+    let url = settings_hooks::hook_url(47939);
+    settings_hooks::install_file(&file, &url, "e2e-token").unwrap();
+
+    let out = Command::new("claude")
+        .current_dir(&dir.0)
+        .args(["-p", "Reply with just the word OK. Do not use tools.", "--model", "haiku", "--max-turns", "3"])
+        .arg("--settings")
+        .arg(&file)
+        .output()
+        .expect("could not run `claude`");
+    let reply = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let name = dir.0.file_name().unwrap().to_string_lossy().to_string();
+    let events: Vec<_> = collect(&rx).into_iter().filter(|e| e.project.as_deref() == Some(name.as_str())).collect();
+    let kinds: Vec<_> = events.iter().map(|e| e.kind).collect();
+    println!("reply={reply:?} events={kinds:?}");
+
+    settings_hooks::uninstall_file(&file, &url).unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), original, "must be restored byte for byte");
+    assert!(!file.with_extension("json.sentiqx-backup").exists());
+
+    assert!(out.status.success() && reply.contains("OK"));
+    assert!(kinds.contains(&"prompt") && kinds.contains(&"turn_stop"), "events must arrive with no folder chosen: {kinds:?}");
 }

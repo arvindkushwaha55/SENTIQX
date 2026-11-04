@@ -1,12 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
 import type { ActivityEvent } from "./types";
 
 export interface ConnectorStatus {
   listening: boolean;
   port: number;
   error: string | null;
+  settingsFile: string | null;
 }
 
 const KINDS = new Set([
@@ -37,14 +37,11 @@ export function toActivityEvent(raw: unknown): ActivityEvent | null {
 }
 
 export const connectorStatus = () => invoke<ConnectorStatus>("connector_status");
-export const startMonitoring = (project: string) => invoke<void>("start_monitoring", { project });
+export const startMonitoring = () => invoke<void>("start_monitoring");
 export const setPaused = (paused: boolean) => invoke<void>("set_paused", { paused });
 export const stopMonitoring = () => invoke<void>("stop_monitoring");
-
-export async function pickProjectFolder(title: string, defaultPath?: string): Promise<string | null> {
-  const chosen = await open({ directory: true, multiple: false, title, defaultPath });
-  return typeof chosen === "string" ? chosen : null;
-}
+/** Optional: limit monitoring to one folder. `null` means every Claude session. */
+export const setProjectFilter = (folder: string | null) => invoke<void>("set_project_filter", { folder });
 
 /** Subscribes to events from the Rust receiver. Returns an unsubscribe function. */
 export function onActivity(cb: (e: ActivityEvent) => void): () => void {

@@ -109,6 +109,22 @@ describe("status engine", () => {
     expect(s.waitingFor).toBeNull();
   });
 
+  it("keeps a short feed of real events and the session id", () => {
+    let s = run([{ kind: "prompt", at: 1, sessionId: "abc" }]);
+    for (let i = 0; i < 12; i++) {
+      s = reducer(s, { type: "event", event: { kind: "tool_end", at: 10 + i, tool: "Read", ok: true } });
+    }
+    expect(s.sessionId).toBe("abc");
+    expect(s.feed).toHaveLength(8); // capped
+    expect(s.feed[0].kind).toBe("tool");
+    // tool_start is not listed, and ignored events add nothing
+    const before = s.feed.length;
+    s = reducer(s, { type: "event", event: { kind: "tool_start", at: 99, tool: "Read", id: "z" } });
+    expect(s.feed).toHaveLength(before);
+    const off = reducer(initialState, { type: "event", event: { kind: "prompt", at: 1 } });
+    expect(off.feed).toHaveLength(0);
+  });
+
   it("stop clears everything", () => {
     const s = reducer(run([{ kind: "prompt", at: 1 }]), { type: "monitor", action: "stop", at: 2 });
     expect(s).toEqual(initialState);

@@ -1,4 +1,4 @@
-import type { ActivityEvent, ErrorRecord, SessionState, Status, ToolKind } from "./types";
+import type { ActivityEvent, ErrorRecord, FeedItem, SessionState, Status, ToolKind } from "./types";
 
 /**
  * Inactivity only ever produces a *suspected* stuck state. A long build or a long
@@ -7,10 +7,14 @@ import type { ActivityEvent, ErrorRecord, SessionState, Status, ToolKind } from 
 export const STUCK_AFTER_MS = 90_000;
 export const STUCK_AFTER_MS_TOOL_RUNNING = 300_000;
 export const MAX_ERRORS = 20;
+export const MAX_FEED = 8;
 
 export const initialState: SessionState = {
   monitor: "off",
   sessionActive: false,
+  sessionId: null,
+  project: null,
+  feed: [],
   startedAt: null,
   lastEventAt: null,
   turnActive: false,
@@ -54,7 +58,39 @@ function removeRunning(running: Record<string, string>, tool: string, id?: strin
 
 let anonSeq = 0;
 
+function feedItem(ev: ActivityEvent): FeedItem | null {
+  switch (ev.kind) {
+    case "prompt":
+      return { at: ev.at, kind: "prompt" };
+    case "tool_end":
+      return { at: ev.at, kind: "tool", tool: ev.tool, ok: ev.ok, interrupted: ev.interrupted };
+    case "permission_request":
+      return { at: ev.at, kind: "wait", tool: ev.tool };
+    case "turn_stop":
+      return { at: ev.at, kind: "stop" };
+    case "api_error":
+      return { at: ev.at, kind: "error", errorType: ev.errorType };
+    case "session_end":
+      return { at: ev.at, kind: "end" };
+    default:
+      return null; // session_start / tool_start are not shown: "Now" already covers them
+  }
+}
+
 export function reducer(s: SessionState, a: Action): SessionState {
+  const next = step(s, a);
+  if (a.type !== "event" || next === s) return next;
+  const item = feedItem(a.event);
+  const sessionId = a.event.sessionId || next.sessionId;
+  return {
+    ...next,
+    sessionId,
+    project: a.event.project || next.project,
+    feed: item ? [...next.feed, item].slice(-MAX_FEED) : next.feed,
+  };
+}
+
+function step(s: SessionState, a: Action): SessionState {
   if (a.type === "monitor") {
     switch (a.action) {
       case "start":

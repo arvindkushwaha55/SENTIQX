@@ -15,6 +15,9 @@ pub struct ActivityEvent {
     pub kind: &'static str,
     pub at: u64,
     pub session_id: String,
+    /// Name of the working folder (last path segment only, never the full path).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -49,6 +52,7 @@ fn base(kind: &'static str, at: u64, payload: &Value) -> ActivityEvent {
         kind,
         at,
         session_id: text(payload, "session_id").unwrap_or_default(),
+        project: text(payload, "cwd").and_then(|c| folder_name(&c)),
         tool: None,
         id: None,
         ok: None,
@@ -57,6 +61,12 @@ fn base(kind: &'static str, at: u64, payload: &Value) -> ActivityEvent {
         error_type: None,
         detail: None,
     }
+}
+
+/// "C:\\Users\\me\\apps\\shop\\" -> "shop". Only the last segment is kept.
+pub fn folder_name(path: &str) -> Option<String> {
+    let name = path.trim().trim_end_matches(['\\', '/']).rsplit(['\\', '/']).next()?.trim();
+    (!name.is_empty() && !name.ends_with(':')).then(|| name.to_string())
 }
 
 /// Returns `None` for events SENTIQX does not use, and for tool events without a tool
@@ -193,6 +203,17 @@ mod tests {
         assert_eq!(v["errorType"], "overloaded");
         assert_eq!(v["kind"], "api_error");
         assert!(v.get("tool").is_none());
+    }
+
+    #[test]
+    fn keeps_only_the_folder_name_never_the_full_path() {
+        assert_eq!(folder_name(r"C:\Users\arvin\apps\shop\"), Some("shop".into()));
+        assert_eq!(folder_name("/home/a/b"), Some("b".into()));
+        assert_eq!(folder_name(r"C:\"), None);
+        assert_eq!(folder_name(""), None);
+        let e = normalize(&json!({"hook_event_name":"Stop","cwd":r"C:\Users\arvin\secret-client\app"}), 1).unwrap();
+        assert_eq!(e.project.as_deref(), Some("app"));
+        assert!(!serde_json::to_string(&e).unwrap().contains("secret-client"));
     }
 
     #[test]

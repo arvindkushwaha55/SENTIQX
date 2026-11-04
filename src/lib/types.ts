@@ -8,7 +8,7 @@ export type ToolKind = "edit" | "run" | "read" | "web" | "agent" | "other";
  * translate real hook events into these. Nothing outside this union can change
  * what SENTIQX shows, so the UI can never display activity that was not reported.
  */
-export type ActivityEvent =
+export type ActivityEvent = { sessionId?: string; project?: string } & (
   | { kind: "session_start"; at: number }
   | { kind: "prompt"; at: number }
   | { kind: "tool_start"; at: number; tool: string; id?: string }
@@ -25,7 +25,18 @@ export type ActivityEvent =
   | { kind: "permission_request"; at: number; tool: string }
   | { kind: "turn_stop"; at: number }
   | { kind: "api_error"; at: number; errorType: string; detail?: string }
-  | { kind: "session_end"; at: number };
+  | { kind: "session_end"; at: number }
+);
+
+/** One line of the "recent activity" list. Built only from reported events. */
+export interface FeedItem {
+  at: number;
+  kind: "prompt" | "tool" | "wait" | "stop" | "error" | "end";
+  tool?: string;
+  ok?: boolean;
+  interrupted?: boolean;
+  errorType?: string;
+}
 
 export interface ErrorRecord {
   id: number;
@@ -39,7 +50,12 @@ export interface ErrorRecord {
 export interface SessionState {
   monitor: MonitorState;
   sessionActive: boolean;
+  sessionId: string | null;
+  /** Name of the working folder reported by the latest event. */
+  project: string | null;
   startedAt: number | null;
+  /** Most recent reported events, newest last. */
+  feed: FeedItem[];
   lastEventAt: number | null;
   turnActive: boolean;
   turnStartedAt: number | null;

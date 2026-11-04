@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Language } from "./types";
 
 function read(key: string): string | null {
@@ -18,8 +17,9 @@ function write(key: string, value: string) {
   }
 }
 
-export const loadLastProject = (): string | null => read("sentiqx.lastProject");
-export const saveLastProject = (p: string) => write("sentiqx.lastProject", p);
+/** Optional folder that monitoring is limited to. Empty means every Claude session. */
+export const loadProjectFilter = (): string => read("sentiqx.projectFilter") ?? "";
+export const saveProjectFilter = (p: string) => write("sentiqx.projectFilter", p);
 
 /** Ticks so time-based status (suspected stuck) re-evaluates without new events. */
 export function useNow(intervalMs = 5000): number {
@@ -38,19 +38,4 @@ export function useLanguage(): [Language, (l: Language) => void] {
     write("sentiqx.lang", l);
   }, []);
   return [lang, set];
-}
-
-/** Always-on-top is user controlled, defaults to on, and is remembered. */
-export function usePinned(): [boolean, () => void] {
-  // v2 key: an earlier build saved "off" by default, which would override the new default.
-  const [pinned, setPinned] = useState(() => read("sentiqx.pin.v2") !== "0");
-  useEffect(() => {
-    getCurrentWindow()
-      .setAlwaysOnTop(pinned)
-      .catch(() => {
-        /* window API unavailable (plain browser): ignore */
-      });
-    write("sentiqx.pin.v2", pinned ? "1" : "0");
-  }, [pinned]);
-  return [pinned, () => setPinned((p) => !p)];
 }

@@ -16,10 +16,19 @@ use tiny_http::{Header, Method, Response, Server, StatusCode};
 const MAX_BODY_BYTES: u64 = 256 * 1024;
 const TOKEN_HEADER: &str = "x-sentiqx-token";
 
+/// Which Claude Code sessions are listened to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Scope {
+    /// Every session on this computer (user-level hooks). No folder has to be chosen.
+    All,
+    /// Only sessions whose working folder is inside this folder.
+    Project(String),
+}
+
 struct Shared {
     token: String,
     active: AtomicBool,
-    project: Mutex<Option<String>>,
+    scope: Mutex<Scope>,
 }
 
 #[derive(Clone)]
@@ -33,9 +42,9 @@ impl Receiver {
         self.shared.active.store(active, Ordering::SeqCst);
     }
 
-    pub fn set_project(&self, project: Option<String>) {
-        if let Ok(mut p) = self.shared.project.lock() {
-            *p = project;
+    pub fn set_scope(&self, scope: Scope) {
+        if let Ok(mut s) = self.shared.scope.lock() {
+            *s = scope;
         }
     }
 }
@@ -73,7 +82,7 @@ pub fn start(
     let shared = Arc::new(Shared {
         token,
         active: AtomicBool::new(false),
-        project: Mutex::new(None),
+        scope: Mutex::new(Scope::All),
     });
     let worker = shared.clone();
 
@@ -128,11 +137,12 @@ fn handle(mut request: tiny_http::Request, shared: &Shared, on_event: &impl Fn(A
         return;
     }
     let Ok(payload) = serde_json::from_slice::<serde_json::Value>(&body) else { return };
-    let project = shared.project.lock().ok().and_then(|p| p.clone());
+    let Some(scope) = shared.scope.lock().ok().map(|s| s.clone()) else { return };
     let cwd = payload.get("cwd").and_then(|c| c.as_str()).unwrap_or("");
-    match project {
-        Some(p) if path_within(&p, cwd) => {}
-        _ => return,
+    match scope {
+        Scope::All => {}
+        Scope::Project(p) if path_within(&p, cwd) => {}
+        Scope::Project(_) => return,
     }
     if let Some(event) = normalize(&payload, now_ms()) {
         on_event(event);
@@ -175,7 +185,7 @@ mod tests {
     fn rejects_missing_or_wrong_token_and_wrong_path() {
         let (r, rx) = setup(47931);
         r.set_active(true);
-        r.set_project(Some(r"C:\proj".into()));
+        r.set_scope(Scope::Project(r"C:\proj".into()));
         let body = r#"{"hook_event_name":"Stop","cwd":"C:\\proj"}"#;
         assert!(post(47931, "/event", None, body).starts_with("HTTP/1.1 401"));
         assert!(post(47931, "/event", Some("nope"), body).starts_with("HTTP/1.1 401"));
@@ -194,7 +204,7 @@ mod tests {
         assert!(rx.recv_timeout(Duration::from_millis(300)).is_err());
 
         r.set_active(true);
-        r.set_project(Some(r"C:\proj".into()));
+        r.set_scope(Scope::Project(r"C:\proj".into()));
         post(47932, "/event", Some("secret"), other);
         assert!(rx.recv_timeout(Duration::from_millis(300)).is_err());
 
@@ -212,7 +222,7 @@ mod tests {
     fn survives_garbage_and_oversized_bodies() {
         let (r, rx) = setup(47933);
         r.set_active(true);
-        r.set_project(Some(r"C:\proj".into()));
+        r.set_scope(Scope::All);
         assert!(post(47933, "/event", Some("secret"), "not json").starts_with("HTTP/1.1 200"));
         let big = "x".repeat(300 * 1024);
         assert!(post(47933, "/event", Some("secret"), &big).starts_with("HTTP/1.1 413"));
@@ -220,6 +230,20 @@ mod tests {
         let ok = r#"{"hook_event_name":"UserPromptSubmit","cwd":"C:\\proj"}"#;
         post(47933, "/event", Some("secret"), ok);
         assert_eq!(rx.recv_timeout(Duration::from_secs(2)).unwrap().kind, "prompt");
+    }
+
+    #[test]
+    fn all_scope_needs_no_folder_and_still_requires_the_token() {
+        let (r, rx) = setup(47938);
+        r.set_active(true); // default scope is All: nothing has to be chosen
+        let any = r#"{"hook_event_name":"UserPromptSubmit","session_id":"s","cwd":"D:\\anywhere\\my-app"}"#;
+        assert!(post(47938, "/event", Some("bad"), any).starts_with("HTTP/1.1 401"));
+        post(47938, "/event", Some("secret"), any);
+        let e = rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        assert_eq!((e.kind, e.project.as_deref()), ("prompt", Some("my-app")));
+        // No cwd at all is fine too.
+        post(47938, "/event", Some("secret"), r#"{"hook_event_name":"Stop"}"#);
+        assert_eq!(rx.recv_timeout(Duration::from_secs(2)).unwrap().kind, "turn_stop");
     }
 
     #[test]

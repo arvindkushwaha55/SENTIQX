@@ -116,8 +116,22 @@ fn write_atomic(path: &Path, value: &Value) -> Result<(), String> {
     fs::rename(&tmp, path).map_err(|e| format!("could not replace {}: {e}", path.display()))
 }
 
+/// `<home>/.claude/settings.json`: the documented user-level settings file. Hooks here apply
+/// to every Claude Code session on this computer, so no project has to be chosen.
+pub fn user_settings_path(home: &Path) -> PathBuf {
+    home.join(".claude").join("settings.json")
+}
+
 pub fn install(project: &Path, url: &str, token: &str) -> Result<(), String> {
-    let path = settings_path(project);
+    install_file(&settings_path(project), url, token)
+}
+
+pub fn uninstall(project: &Path, url: &str) -> Result<(), String> {
+    uninstall_file(&settings_path(project), url)
+}
+
+pub fn install_file(path: &Path, url: &str, token: &str) -> Result<(), String> {
+    let path = path.to_path_buf();
     let existing = read_settings(&path)?;
     let mut settings = match &existing {
         Some(v) => v.clone(),
@@ -136,12 +150,25 @@ pub fn install(project: &Path, url: &str, token: &str) -> Result<(), String> {
     write_atomic(&path, &settings)
 }
 
-pub fn uninstall(project: &Path, url: &str) -> Result<(), String> {
-    let path = settings_path(project);
+pub fn uninstall_file(path: &Path, url: &str) -> Result<(), String> {
+    let path = path.to_path_buf();
     let Some(mut settings) = read_settings(&path)? else { return Ok(()) };
     if !remove_hooks(&mut settings, url) {
         return Ok(());
     }
+
+    // Leave the file exactly as it was. If nothing else changed while we were connected, the
+    // backup is put back byte for byte; if the user changed something, their change is kept.
+    let backup = path.with_extension("json.sentiqx-backup");
+    let unchanged = fs::read_to_string(&backup)
+        .ok()
+        .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+        .is_some_and(|b| b == settings);
+    if unchanged {
+        return fs::rename(&backup, &path).map_err(|e| format!("could not restore {}: {e}", path.display()));
+    }
+    let _ = fs::remove_file(&backup);
+
     if settings.as_object().is_some_and(Map::is_empty) {
         fs::remove_file(&path).map_err(|e| format!("could not remove {}: {e}", path.display()))
     } else {
@@ -219,8 +246,19 @@ mod tests {
         assert!(fs::read_to_string(&path).unwrap().contains("X-Sentiqx-Token"));
 
         uninstall(&dir, URL).unwrap();
+        // Byte for byte what the user had, and no backup left behind.
+        assert_eq!(fs::read_to_string(&path).unwrap(), r#"{"permissions":{"allow":["Read"]}}"#);
+        assert!(!path.with_extension("json.sentiqx-backup").exists());
+
+        // If the user changed the file while connected, their change survives.
+        install(&dir, URL, "tok").unwrap();
+        let mut edited: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        edited["theme"] = json!("dark");
+        fs::write(&path, edited.to_string()).unwrap();
+        uninstall(&dir, URL).unwrap();
         let after: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
-        assert_eq!(after, json!({"permissions":{"allow":["Read"]}}));
+        assert_eq!(after, json!({"permissions":{"allow":["Read"]},"theme":"dark"}));
+        assert!(!path.with_extension("json.sentiqx-backup").exists());
 
         // A file we created ourselves disappears again after uninstall.
         let fresh = std::env::temp_dir().join(format!("sentiqx-test-fresh-{}", std::process::id()));

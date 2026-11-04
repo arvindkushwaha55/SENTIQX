@@ -1,25 +1,34 @@
+pub mod active_window;
 pub mod normalize;
+pub mod privacy;
 pub mod receiver;
 pub mod settings_hooks;
+pub mod window;
 
-use receiver::Receiver;
+use active_window::{ActiveApp, Awareness};
+use privacy::AwarenessPrefs;
+use receiver::{Receiver, Scope};
 use serde::Serialize;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Mutex;
-use tauri::{Emitter, Manager, RunEvent};
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, Mutex};
+use tauri::{Emitter, Manager, RunEvent, WindowEvent};
+use tauri_plugin_window_state::StateFlags;
+use window::WindowPrefs;
 
-/// Fixed so the hook URL written into a project's settings stays valid across restarts.
+/// Fixed so the hook URL written into the settings file stays valid across restarts.
 pub const PORT: u16 = 47821;
-const RECORD_FILE: &str = "active-project.txt";
+const RECORD_FILE: &str = "active-hooks.txt";
 
 struct Connector {
     token: String,
     receiver: Option<Receiver>,
     listen_error: Option<String>,
-    /// Project whose settings currently contain our hooks.
-    project: Mutex<Option<PathBuf>>,
+    /// The settings file that currently contains our hooks.
+    installed: Mutex<Option<PathBuf>>,
     data_dir: PathBuf,
+    home_dir: Option<PathBuf>,
 }
 
 #[derive(Serialize)]
@@ -28,6 +37,8 @@ struct ConnectorStatus {
     listening: bool,
     port: u16,
     error: Option<String>,
+    /// The file hooks are written to when monitoring starts.
+    settings_file: Option<String>,
 }
 
 fn random_token() -> Result<String, String> {
@@ -41,15 +52,19 @@ impl Connector {
         self.data_dir.join(RECORD_FILE)
     }
 
-    /// Removes our hooks from the project (if any) and forgets it.
-    fn release_project(&self) -> Result<(), String> {
+    fn user_settings(&self) -> Option<PathBuf> {
+        self.home_dir.as_deref().map(settings_hooks::user_settings_path)
+    }
+
+    /// Removes our hooks from the settings file (if any) and stops passing events on.
+    fn release_hooks(&self) -> Result<(), String> {
         if let Some(r) = &self.receiver {
             r.set_active(false);
-            r.set_project(None);
+            r.set_scope(Scope::All);
         }
-        let taken = self.project.lock().map_err(|_| "internal lock error")?.take();
+        let taken = self.installed.lock().map_err(|_| "internal lock error")?.take();
         let result = match taken {
-            Some(p) => settings_hooks::uninstall(&p, &settings_hooks::hook_url(PORT)),
+            Some(file) => settings_hooks::uninstall_file(&file, &settings_hooks::hook_url(PORT)),
             None => Ok(()),
         };
         let _ = fs::remove_file(self.record_path());
@@ -63,29 +78,28 @@ fn connector_status(state: tauri::State<Connector>) -> ConnectorStatus {
         listening: state.receiver.is_some(),
         port: PORT,
         error: state.listen_error.clone(),
+        settings_file: state.user_settings().map(|p| p.display().to_string()),
     }
 }
 
-/// Installs the hooks into `project` and starts passing that project's events on.
+/// Starts listening to Claude Code on this computer. No folder is needed: the hooks go into
+/// the user-level settings file, which Claude Code applies to every session.
 #[tauri::command]
-fn start_monitoring(project: String, state: tauri::State<Connector>) -> Result<(), String> {
+fn start_monitoring(state: tauri::State<Connector>) -> Result<(), String> {
     let receiver = state
         .receiver
         .as_ref()
         .ok_or_else(|| state.listen_error.clone().unwrap_or_else(|| "receiver is not running".into()))?;
-    let dir = PathBuf::from(&project);
-    if !dir.is_dir() {
-        return Err(format!("{project} is not a folder"));
-    }
+    let file = state.user_settings().ok_or("could not find your home folder")?;
 
-    state.release_project()?;
-    settings_hooks::install(&dir, &settings_hooks::hook_url(PORT), &state.token)?;
+    state.release_hooks()?;
+    settings_hooks::install_file(&file, &settings_hooks::hook_url(PORT), &state.token)?;
     // Remember it so a crash cannot leave hooks behind forever.
     fs::create_dir_all(&state.data_dir).map_err(|e| e.to_string())?;
-    fs::write(state.record_path(), &project).map_err(|e| e.to_string())?;
+    fs::write(state.record_path(), file.display().to_string()).map_err(|e| e.to_string())?;
 
-    *state.project.lock().map_err(|_| "internal lock error")? = Some(dir);
-    receiver.set_project(Some(project));
+    *state.installed.lock().map_err(|_| "internal lock error")? = Some(file);
+    receiver.set_scope(Scope::All);
     receiver.set_active(true);
     Ok(())
 }
@@ -93,25 +107,104 @@ fn start_monitoring(project: String, state: tauri::State<Connector>) -> Result<(
 #[tauri::command]
 fn set_paused(paused: bool, state: tauri::State<Connector>) {
     if let Some(r) = &state.receiver {
-        let has_project = state.project.lock().map(|p| p.is_some()).unwrap_or(false);
-        r.set_active(!paused && has_project);
+        let installed = state.installed.lock().map(|p| p.is_some()).unwrap_or(false);
+        r.set_active(!paused && installed);
     }
 }
 
 #[tauri::command]
 fn stop_monitoring(state: tauri::State<Connector>) -> Result<(), String> {
-    state.release_project()
+    state.release_hooks()
+}
+
+/// Optional: only listen to Claude sessions working inside this folder. `None` = all sessions.
+#[tauri::command]
+fn set_project_filter(folder: Option<String>, state: tauri::State<Connector>) -> Result<(), String> {
+    let receiver = state.receiver.as_ref().ok_or("receiver is not running")?;
+    match folder.map(|f| f.trim().to_string()).filter(|f| !f.is_empty()) {
+        None => receiver.set_scope(Scope::All),
+        Some(f) => {
+            if !PathBuf::from(&f).is_dir() {
+                return Err(format!("{f} is not a folder"));
+            }
+            receiver.set_scope(Scope::Project(f));
+        }
+    }
+    Ok(())
+}
+
+// ---- active-application awareness (permission-gated) ----
+
+struct Privacy {
+    prefs: Mutex<AwarenessPrefs>,
+    dir: PathBuf,
+    awareness: Arc<Awareness>,
+}
+
+#[tauri::command]
+fn awareness_prefs(state: tauri::State<Privacy>) -> AwarenessPrefs {
+    state.prefs.lock().map(|p| *p).unwrap_or_default()
+}
+
+#[tauri::command]
+fn set_awareness(enabled: bool, show_titles: bool, state: tauri::State<Privacy>) -> Result<(), String> {
+    // Titles can only be on while awareness itself is on.
+    let prefs = AwarenessPrefs { asked: true, enabled, show_titles: enabled && show_titles };
+    privacy::save(&state.dir, &prefs)?;
+    state.awareness.show_titles.store(prefs.show_titles, Ordering::SeqCst);
+    state.awareness.enabled.store(prefs.enabled, Ordering::SeqCst);
+    *state.prefs.lock().map_err(|_| "internal lock error")? = prefs;
+    Ok(())
+}
+
+#[tauri::command]
+fn active_app(state: tauri::State<Privacy>) -> Option<ActiveApp> {
+    state.awareness.latest.lock().ok().and_then(|l| l.clone())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
+        // Remember position and size only. Visibility is handled by us, so a saved
+        // "hidden" state can never leave the user without a window.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::POSITION | StateFlags::SIZE)
+                .build(),
+        )
+        .on_window_event(|window, event| {
+            // Losing focus must never drop the pin.
+            if let WindowEvent::Focused(false) = event
+                && window.label() == window::MAIN
+                && let Some(prefs) = window.try_state::<WindowPrefs>()
+            {
+                window::reassert_pin(window, &prefs);
+            }
+        })
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let token = random_token()?;
 
+            // Window: apply the saved pin natively, build the tray, then show without stealing focus.
+            let prefs = WindowPrefs::load(data_dir.clone());
+            if let Some(main) = app.get_webview_window(window::MAIN) {
+                window::apply_pin(&main, &prefs);
+                let _ = main.show();
+            }
+            app.manage(prefs);
+            window::build_tray(app.handle())?;
+
+            // Application awareness: off until the user has allowed it.
+            let saved = privacy::load(&data_dir);
+            let awareness = Arc::new(Awareness::new(saved.enabled, saved.enabled && saved.show_titles));
+            let emitter = app.handle().clone();
+            let _ = active_window::spawn_watcher(awareness.clone(), std::process::id(), move |a| {
+                let _ = emitter.emit("active-app", a);
+            });
+            app.manage(Privacy { prefs: Mutex::new(saved), dir: data_dir.clone(), awareness });
+
+            // Claude Code connector.
             let handle = app.handle().clone();
             let (receiver, listen_error) = match receiver::start(PORT, token.clone(), move |event| {
                 let _ = handle.emit("activity", event);
@@ -124,13 +217,21 @@ pub fn run() {
                 token,
                 receiver,
                 listen_error,
-                project: Mutex::new(None),
+                installed: Mutex::new(None),
                 data_dir,
+                home_dir: app.path().home_dir().ok(),
             };
 
-            // If the app crashed last time, take our hooks out of that project now.
+            // If the app crashed last time, take our hooks out of that file now.
             if let Ok(old) = fs::read_to_string(connector.record_path()) {
-                let _ = settings_hooks::uninstall(&PathBuf::from(old.trim()), &settings_hooks::hook_url(PORT));
+                let old = PathBuf::from(old.trim());
+                let url = settings_hooks::hook_url(PORT);
+                // Older builds recorded a project folder, newer ones the settings file itself.
+                let _ = if old.is_dir() {
+                    settings_hooks::uninstall(&old, &url)
+                } else {
+                    settings_hooks::uninstall_file(&old, &url)
+                };
                 let _ = fs::remove_file(connector.record_path());
             }
 
@@ -141,7 +242,13 @@ pub fn run() {
             connector_status,
             start_monitoring,
             set_paused,
-            stop_monitoring
+            stop_monitoring,
+            set_project_filter,
+            awareness_prefs,
+            set_awareness,
+            active_app,
+            window::window_pinned,
+            window::set_window_pinned
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
@@ -150,7 +257,7 @@ pub fn run() {
         if let RunEvent::Exit = event
             && let Some(c) = handle.try_state::<Connector>()
         {
-            let _ = c.release_project();
+            let _ = c.release_hooks();
         }
     });
 }

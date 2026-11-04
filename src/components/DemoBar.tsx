@@ -12,7 +12,7 @@ export function DemoBar({ dispatch, active }: { dispatch: Dispatch<Action>; acti
   const send = (events: ActivityEvent[]) => {
     dispatch({ type: "monitor", action: "stop", at: Date.now() });
     dispatch({ type: "monitor", action: "start", at: Date.now() });
-    events.forEach((event) => dispatch({ type: "event", event }));
+    events.forEach((event) => dispatch({ type: "event", event: { ...event, sessionId: "demo01" } }));
   };
   const t = Date.now();
 

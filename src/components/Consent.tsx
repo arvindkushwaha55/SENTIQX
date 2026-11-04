@@ -1,4 +1,5 @@
 import type { Dict } from "../lib/i18n";
+import { CheckIcon, CloseIcon, ShieldIcon } from "./icons";
 import { Button } from "./ui";
 
 export function Consent({
@@ -12,27 +13,32 @@ export function Consent({
 }) {
   return (
     <div
-      className="absolute inset-0 z-10 flex items-end bg-black/60 p-3 backdrop-blur-[2px]"
+      className="absolute inset-0 z-10 flex items-end bg-[rgba(2,4,8,0.72)] p-3"
       role="dialog"
       aria-modal="true"
       aria-labelledby="consent-title"
     >
-      <div className="rise max-h-full w-full overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4">
-        <h2 id="consent-title" className="text-base font-semibold">
-          {d.consent.title}
-        </h2>
-        <p className="mt-1 text-[13px] text-[var(--muted)]">{d.consent.intro}</p>
+      <div className="surface rise max-h-full w-full overflow-y-auto !border-[var(--line-strong)] !bg-[#0b111c] p-4">
+        <div className="flex items-center gap-2 text-[var(--cyan)]">
+          <ShieldIcon size={18} />
+          <h2 id="consent-title" className="text-[16px] font-semibold text-[var(--text)]">
+            {d.consent.title}
+          </h2>
+        </div>
+        <p className="mt-1.5 text-[13px] text-[var(--muted)]">{d.consent.intro}</p>
 
-        <List items={d.consent.monitored} color="var(--s-working)" mark="+" />
-        <List items={d.consent.notMonitored} color="var(--muted)" mark="-" />
+        <List items={d.consent.monitored} ok />
+        <List items={d.consent.notMonitored} />
 
-        <p className="mt-3 text-xs text-[var(--text)]">{d.consent.changes}</p>
-        <p className="mt-1 text-xs text-[var(--muted)]">{d.consent.local}</p>
-        <p className="mt-1 text-xs text-[var(--muted)]">{d.consent.external}</p>
+        <p className="mt-3 text-xs leading-relaxed text-[var(--text)]/90">{d.consent.changes}</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-[var(--muted)]">{d.consent.local}</p>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">{d.consent.external}</p>
 
         <div className="mt-4 flex gap-2">
-          <Button onClick={onCancel}>{d.consent.cancel}</Button>
-          <Button variant="primary" onClick={onAllow}>
+          <Button variant="subtle" onClick={onCancel}>
+            {d.consent.cancel}
+          </Button>
+          <Button variant="primary" className="flex-1" onClick={onAllow}>
             {d.consent.allow}
           </Button>
         </div>
@@ -41,13 +47,13 @@ export function Consent({
   );
 }
 
-function List({ items, color, mark }: { items: string[]; color: string; mark: string }) {
+function List({ items, ok }: { items: string[]; ok?: boolean }) {
   return (
     <ul className="mt-3 space-y-1.5">
       {items.map((t) => (
         <li key={t} className="flex gap-2 text-[13px] leading-snug">
-          <span className="w-3 shrink-0 text-center font-mono" style={{ color }} aria-hidden="true">
-            {mark}
+          <span className={`mt-0.5 shrink-0 ${ok ? "text-[var(--s-done)]" : "text-[var(--faint)]"}`}>
+            {ok ? <CheckIcon size={14} /> : <CloseIcon size={14} />}
           </span>
           <span>{t}</span>
         </li>
