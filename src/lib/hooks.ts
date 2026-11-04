@@ -21,6 +21,15 @@ function write(key: string, value: string) {
 export const loadProjectFilter = (): string => read("sentiqx.projectFilter") ?? "";
 export const saveProjectFilter = (p: string) => write("sentiqx.projectFilter", p);
 
+export function useNotificationsEnabled(): [boolean, (v: boolean) => void] {
+  const [on, setOn] = useState(() => read("sentiqx.notifications") !== "0");
+  const set = useCallback((v: boolean) => {
+    setOn(v);
+    write("sentiqx.notifications", v ? "1" : "0");
+  }, []);
+  return [on, set];
+}
+
 /** Ticks so time-based status (suspected stuck) re-evaluates without new events. */
 export function useNow(intervalMs = 5000): number {
   const [now, setNow] = useState(() => Date.now());

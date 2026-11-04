@@ -19,8 +19,10 @@ import {
   stopMonitoring,
 } from "./lib/connector";
 import { deriveStatus, initialState, reducer } from "./lib/engine";
-import { loadProjectFilter, saveProjectFilter, useLanguage, useNow } from "./lib/hooks";
+import { loadProjectFilter, saveProjectFilter, useLanguage, useNotificationsEnabled, useNow } from "./lib/hooks";
 import { dictionaries } from "./lib/i18n";
+import { notificationFor, notify } from "./lib/notify";
+import type { Status } from "./lib/types";
 import { usePinned } from "./lib/windowControls";
 
 const NO_EVENTS_HINT_AFTER_MS = 20_000;
@@ -38,6 +40,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState(loadProjectFilter);
   const [filterError, setFilterError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useNotificationsEnabled();
   const mainRef = useRef<HTMLElement>(null);
   const now = useNow();
 
@@ -60,6 +63,14 @@ function App() {
       .then(setConnector)
       .catch(() => setConnector({ listening: false, port: 0, error: null, settingsFile: null }));
   }, []);
+
+  // Meaningful status changes only. Demo data never notifies.
+  const prevStatus = useRef<Status | null>(null);
+  useEffect(() => {
+    const n = notificationFor(prevStatus.current, status, state, d);
+    prevStatus.current = status;
+    if (n && notifications && !demo) void notify(n.title, n.body);
+  }, [status, state, d, notifications, demo]);
 
   // Real activity from the Rust receiver. The engine itself ignores events unless monitoring is on.
   useEffect(() => onActivity((event) => dispatch({ type: "event", event })), []);
@@ -178,7 +189,7 @@ function App() {
           <IntelView d={d} />
         </div>
         <div hidden={view !== "history"}>
-          <HistoryView d={d} />
+          <HistoryView d={d} active={view === "history"} version={state.feed.length} />
         </div>
         <div hidden={view !== "settings"}>
           <SettingsView
@@ -192,6 +203,8 @@ function App() {
             filter={filter}
             filterError={filterError}
             onFilter={(f) => void applyFilter(f)}
+            notifications={notifications}
+            onNotifications={setNotifications}
           />
         </div>
       </main>

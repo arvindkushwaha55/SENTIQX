@@ -205,6 +205,9 @@ export interface Dict {
     awarenessHint: string;
     titlesToggle: string;
     titlesHint: string;
+    notifications: string;
+    notificationsToggle: string;
+    notificationsHint: string;
     filter: string;
     filterHint: string;
     filterPlaceholder: string;
@@ -222,7 +225,30 @@ export interface Dict {
     about: string;
     aboutText: string;
   };
-  history: { title: string; empty: string; note: string };
+  history: {
+    title: string;
+    empty: string;
+    note: string;
+    unavailable: string;
+    loading: string;
+    refresh: string;
+    outcome: { finished: string; error: string; ended: string; unknown: string };
+    noTools: string;
+    toolsLabel: string;
+    errorsLabel: string;
+    deleteOne: string;
+    deleteAll: string;
+    confirmAll: string;
+    cancel: string;
+    storedNote: string;
+  };
+  notify: {
+    waitingTitle: string;
+    errorTitle: string;
+    stuckTitle: string;
+    stuckBody: string;
+    doneTitle: string;
+  };
 }
 
 const list = (items: string[], and: string) =>
@@ -522,6 +548,9 @@ const en: Dict = {
     awarenessHint: "Reads only the app's name, and only while this is on.",
     titlesToggle: "Show window titles",
     titlesHint: "Titles can contain file names or email subjects. They are shown here only and never saved.",
+    notifications: "Notifications",
+    notificationsToggle: "Notify me about important moments",
+    notificationsHint: "When Claude needs you, stops on an error, may be stuck, or finishes a longer task.",
     filter: "Limit to one project (optional)",
     filterHint: "By default SENTIQX follows every Claude session. Enter a folder path to follow only that project.",
     filterPlaceholder: "C:\\Users\\you\\my-project",
@@ -542,7 +571,31 @@ const en: Dict = {
   history: {
     title: "History",
     empty: "No saved sessions yet.",
-    note: "Session history will be stored on this computer only, and you will be able to delete it.",
+    note: "Claude Code sessions appear here after you connect. They stay on this computer.",
+    unavailable: "History could not be opened. Monitoring still works.",
+    loading: "Loading history...",
+    refresh: "Refresh",
+    outcome: {
+      finished: "Claude finished its last turn",
+      error: "Stopped by an error",
+      ended: "Session ended",
+      unknown: "No final event was reported",
+    },
+    noTools: "No finished tool actions recorded.",
+    toolsLabel: "Verified tool actions",
+    errorsLabel: "Errors",
+    deleteOne: "Delete this session",
+    deleteAll: "Delete all",
+    confirmAll: "Delete all history? This cannot be undone.",
+    cancel: "Cancel",
+    storedNote: "Only tool names, counts, error types, times and the folder name are stored. Never prompts, commands or output.",
+  },
+  notify: {
+    waitingTitle: "Claude needs you",
+    errorTitle: "Claude stopped",
+    stuckTitle: "Claude may be stuck",
+    stuckBody: "No activity for a while. This is only a suspicion, so check the Claude window.",
+    doneTitle: "Claude finished",
   },
 };
 
@@ -846,6 +899,9 @@ const hinglish: Dict = {
     awarenessHint: "Sirf app ka naam padhta hai, aur sirf jab tak yeh on hai.",
     titlesToggle: "Window titles dikhao",
     titlesHint: "Titles mein file ke naam ya email subject ho sakte hain. Ye sirf yahan dikhte hain, kabhi save nahi hote.",
+    notifications: "Notifications",
+    notificationsToggle: "Zaroori moments par batao",
+    notificationsHint: "Jab Claude ko aapki zaroorat ho, error se ruke, atka lage, ya lamba kaam khatam kare.",
     filter: "Ek project tak seemit karo (optional)",
     filterHint: "Normally SENTIQX har Claude session follow karta hai. Sirf ek project follow karne ke liye folder ka path daalo.",
     filterPlaceholder: "C:\\Users\\aap\\mera-project",
@@ -866,7 +922,31 @@ const hinglish: Dict = {
   history: {
     title: "History",
     empty: "Abhi koi saved session nahi hai.",
-    note: "Session history sirf isi computer par save hogi, aur aap use delete kar paoge.",
+    note: "Connect karne ke baad Claude Code sessions yahan dikhenge. Ye isi computer par rehte hain.",
+    unavailable: "History khul nahi paayi. Monitoring phir bhi chalti hai.",
+    loading: "History load ho rahi hai...",
+    refresh: "Refresh",
+    outcome: {
+      finished: "Claude ne apna aakhri turn khatam kiya",
+      error: "Error se ruk gaya",
+      ended: "Session khatam",
+      unknown: "Koi final event report nahi hua",
+    },
+    noTools: "Koi poora tool action record nahi hua.",
+    toolsLabel: "Verified tool actions",
+    errorsLabel: "Errors",
+    deleteOne: "Ye session delete karo",
+    deleteAll: "Sab delete karo",
+    confirmAll: "Poori history delete karein? Ye wapas nahi aayegi.",
+    cancel: "Cancel",
+    storedNote: "Sirf tool ke naam, counts, error types, time aur folder ka naam save hota hai. Prompts, commands ya output kabhi nahi.",
+  },
+  notify: {
+    waitingTitle: "Claude ko aapki zaroorat hai",
+    errorTitle: "Claude ruk gaya",
+    stuckTitle: "Claude shayad atka hua hai",
+    stuckBody: "Kaafi der se koi activity nahi. Ye sirf shak hai, Claude window dekh lo.",
+    doneTitle: "Claude ne kaam khatam kiya",
   },
 };
 

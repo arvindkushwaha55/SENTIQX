@@ -72,12 +72,37 @@ pub fn classify(exe: &str) -> (String, Category) {
         "thunderbird" => Some(("Thunderbird", Communication)),
         "signal" => Some(("Signal", Communication)),
         "zoom" => Some(("Zoom", Communication)),
+        "explorer" => Some(("File Explorer", Other)),
+        "notepad" => Some(("Notepad", Other)),
         _ => None,
     };
     match known {
         Some((name, cat)) => (name.to_string(), cat),
         None => (exe.to_string(), Other),
     }
+}
+
+/// Parts of Windows itself (Start, search, Alt-Tab, lock screen). Passing through one of
+/// these is not "using an app", so the last real application stays shown.
+pub fn is_shell_surface(exe: &str) -> bool {
+    matches!(
+        exe.to_lowercase().as_str(),
+        "searchhost"
+            | "searchapp"
+            | "startmenuexperiencehost"
+            | "shellexperiencehost"
+            | "lockapp"
+            | "textinputhost"
+            | "applicationframehost"
+    )
+}
+
+/// Window classes of the taskbar, the desktop and the Alt-Tab switcher.
+pub fn is_shell_class(class: &str) -> bool {
+    matches!(
+        class,
+        "Shell_TrayWnd" | "Shell_SecondaryTrayWnd" | "Progman" | "WorkerW" | "XamlExplorerHostIslandWindow" | "MultitaskingViewFrame" | "TaskListThumbnailWnd"
+    )
 }
 
 /// "C:\\Program Files\\Microsoft VS Code\\Code.exe" -> "Code"
@@ -103,11 +128,13 @@ pub fn build(exe: &str, title: Option<String>, pid: u32, show_title: bool) -> Ac
 #[cfg(windows)]
 mod win {
     use windows_sys::Win32::Foundation::{CloseHandle, HWND, LPARAM};
+    use windows_sys::Win32::Graphics::Dwm::{DWMWA_CLOAKED, DwmGetWindowAttribute};
     use windows_sys::Win32::System::Threading::{
         OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        EnumChildWindows, GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId,
+        EnumChildWindows, EnumWindows, GWL_EXSTYLE, GetClassNameW, GetForegroundWindow, GetWindowLongW,
+        GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, WS_EX_TOOLWINDOW,
     };
 
     pub struct Raw {
@@ -162,9 +189,53 @@ mod win {
         if state.1 != 0 { state.1 } else { pid }
     }
 
+    fn class_of(hwnd: HWND) -> String {
+        let mut buf = [0u16; 128];
+        let n = unsafe { GetClassNameW(hwnd, buf.as_mut_ptr(), buf.len() as i32) };
+        String::from_utf16_lossy(&buf[..n.max(0) as usize])
+    }
+
     pub fn foreground() -> Option<Raw> {
-        let hwnd: HWND = unsafe { GetForegroundWindow() };
-        if hwnd.is_null() {
+        read(unsafe { GetForegroundWindow() })
+    }
+
+    /// A window a person can actually see and switch to: not hidden, minimised, cloaked
+    /// (suspended packaged apps) or a tool window, and with a title.
+    fn is_real_app_window(hwnd: HWND) -> bool {
+        unsafe {
+            if IsWindowVisible(hwnd) == 0 || IsIconic(hwnd) != 0 {
+                return false;
+            }
+            if (GetWindowLongW(hwnd, GWL_EXSTYLE) as u32) & WS_EX_TOOLWINDOW != 0 {
+                return false;
+            }
+            let mut cloaked = 0u32;
+            let ok = DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED as u32, &mut cloaked as *mut u32 as *mut _, 4);
+            if ok == 0 && cloaked != 0 {
+                return false;
+            }
+        }
+        !title_of(hwnd).trim().is_empty()
+    }
+
+    unsafe extern "system" fn find_top(hwnd: HWND, lparam: LPARAM) -> i32 {
+        let out = unsafe { &mut *(lparam as *mut (u32, HWND)) };
+        if pid_of(hwnd) != out.0 && is_real_app_window(hwnd) && !super::is_shell_class(&class_of(hwnd)) {
+            out.1 = hwnd;
+            return 0; // windows are enumerated from the top, so the first match is it
+        }
+        1
+    }
+
+    /// The application just below SENTIQX, used when SENTIQX itself is in front.
+    pub fn top_other(own_pid: u32) -> Option<Raw> {
+        let mut state: (u32, HWND) = (own_pid, std::ptr::null_mut());
+        unsafe { EnumWindows(Some(find_top), &mut state as *mut _ as LPARAM) };
+        read(state.1)
+    }
+
+    fn read(hwnd: HWND) -> Option<Raw> {
+        if hwnd.is_null() || super::is_shell_class(&class_of(hwnd)) {
             return None;
         }
         let pid = pid_of(hwnd);
@@ -176,17 +247,35 @@ mod win {
     }
 }
 
-/// Reads the window in front right now. `None` when nothing readable is in front.
+#[cfg(windows)]
+fn from_raw(raw: win::Raw, show_title: bool) -> Option<ActiveApp> {
+    let exe = exe_stem(&raw.exe_path);
+    (!is_shell_surface(&exe)).then(|| build(&exe, Some(raw.title), raw.pid, show_title))
+}
+
+/// Reads the window in front right now. `None` when nothing readable is in front,
+/// or when it is part of the Windows shell rather than an application.
 pub fn current(show_title: bool) -> Option<ActiveApp> {
     #[cfg(windows)]
     {
-        let raw = win::foreground()?;
-        let exe = exe_stem(&raw.exe_path);
-        Some(build(&exe, Some(raw.title), raw.pid, show_title))
+        from_raw(win::foreground()?, show_title)
     }
     #[cfg(not(windows))]
     {
         let _ = show_title;
+        None
+    }
+}
+
+/// The application directly beneath `own_pid`'s windows in the stacking order.
+pub fn top_other(own_pid: u32, show_title: bool) -> Option<ActiveApp> {
+    #[cfg(windows)]
+    {
+        from_raw(win::top_other(own_pid)?, show_title)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (own_pid, show_title);
         None
     }
 }
@@ -234,9 +323,15 @@ pub fn spawn_watcher(
             }
             was_enabled = true;
             let titles = state.show_titles.load(Ordering::SeqCst);
-            let Some(now) = current(titles) else { continue };
+            let Some(mut now) = current(titles) else { continue };
             if now.pid == own_pid {
-                continue;
+                // SENTIQX is in front. Keep the last real app; if there is none yet (the user
+                // just allowed detection from this window), use the app right beneath us.
+                if last.is_some() {
+                    continue;
+                }
+                let Some(below) = top_other(own_pid, titles) else { continue };
+                now = below;
             }
             if last.as_ref() != Some(&now) {
                 if let Ok(mut l) = state.latest.lock() {
@@ -273,7 +368,17 @@ mod tests {
     #[test]
     fn unknown_programs_stay_unknown() {
         assert_eq!(classify("MyWeirdTool"), ("MyWeirdTool".into(), Category::Other));
-        assert_eq!(classify("notepad"), ("notepad".into(), Category::Other));
+        assert_eq!(classify("explorer"), ("File Explorer".into(), Category::Other));
+    }
+
+    #[test]
+    fn windows_shell_is_not_treated_as_an_app() {
+        for exe in ["SearchHost", "StartMenuExperienceHost", "ShellExperienceHost", "LockApp"] {
+            assert!(is_shell_surface(exe), "{exe}");
+        }
+        assert!(!is_shell_surface("Code") && !is_shell_surface("explorer"));
+        assert!(is_shell_class("Shell_TrayWnd") && is_shell_class("XamlExplorerHostIslandWindow"));
+        assert!(!is_shell_class("Chrome_WidgetWin_1"));
     }
 
     #[test]

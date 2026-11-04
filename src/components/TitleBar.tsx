@@ -45,7 +45,7 @@ export function TitleBar({
       <button type="button" className="winbtn" onClick={hideWindow} aria-label={d.win.hide} title={d.win.hide}>
         <MinusIcon size={15} />
       </button>
-      <button type="button" className="winbtn danger" onClick={closeWindow} aria-label={d.win.close} title={d.win.close}>
+      <button type="button" className="winbtn danger" onClick={(e) => closeWindow(e.isTrusted)} aria-label={d.win.close} title={d.win.close}>
         <CloseIcon size={15} />
       </button>
     </header>

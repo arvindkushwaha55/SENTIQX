@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AwarenessPrefs } from "../lib/awareness";
+import { elapsed, shortId } from "../lib/format";
+import { type SessionRow, historyClear, historyDelete, historyList, outcomeOf } from "../lib/history";
 import type { Dict } from "../lib/i18n";
 import type { Language } from "../lib/types";
-import { HistoryIcon, PinIcon } from "./icons";
+import { HistoryIcon, PinIcon, TrashIcon } from "./icons";
 import { Button, Card, Empty, Label } from "./ui";
 
 export function SettingsView({
@@ -16,6 +18,8 @@ export function SettingsView({
   filter,
   filterError,
   onFilter,
+  notifications,
+  onNotifications,
 }: {
   d: Dict;
   lang: Language;
@@ -27,6 +31,8 @@ export function SettingsView({
   filter: string;
   filterError: string | null;
   onFilter: (folder: string) => void;
+  notifications: boolean;
+  onNotifications: (v: boolean) => void;
 }) {
   const t = d.settings;
   const [draft, setDraft] = useState(filter);
@@ -72,6 +78,19 @@ export function SettingsView({
             checked={titles}
             disabled={!enabled}
             onChange={(v) => onAwareness(true, v)}
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <Label>{t.notifications}</Label>
+        <div className="mt-2.5">
+          <Toggle
+            id="set-notify"
+            label={t.notificationsToggle}
+            hint={t.notificationsHint}
+            checked={notifications}
+            onChange={onNotifications}
           />
         </div>
       </Card>
@@ -208,13 +227,131 @@ function Seg({ active, onClick, children }: { active: boolean; onClick: () => vo
   );
 }
 
-export function HistoryView({ d }: { d: Dict }) {
+export function HistoryView({ d, active, version }: { d: Dict; active: boolean; version: number }) {
+  const t = d.history;
+  const [rows, setRows] = useState<SessionRow[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+
+  const load = useCallback(() => {
+    historyList()
+      .then((r) => {
+        setRows(r);
+        setFailed(false);
+      })
+      .catch(() => setFailed(true));
+  }, []);
+
+  // Read the database only while this tab is open.
+  useEffect(() => {
+    if (active) load();
+  }, [active, version, load]);
+
   return (
     <div className="space-y-3">
-      <h2 className="px-1 text-[17px] font-semibold tracking-tight">{d.history.title}</h2>
-      <Card>
-        <Empty icon={<HistoryIcon size={22} />} title={d.history.empty} note={d.history.note} />
-      </Card>
+      <div className="flex items-center justify-between px-1">
+        <h2 className="text-[17px] font-semibold tracking-tight">{t.title}</h2>
+        {rows && rows.length > 0 && !confirm && (
+          <button type="button" className="text-[11px] text-[var(--muted)] hover:text-[var(--s-error)]" onClick={() => setConfirm(true)}>
+            {t.deleteAll}
+          </button>
+        )}
+      </div>
+
+      {confirm && (
+        <Card accent="var(--s-error)">
+          <p className="text-[13px]">{t.confirmAll}</p>
+          <div className="mt-3 flex gap-2">
+            <Button variant="subtle" onClick={() => setConfirm(false)}>
+              {t.cancel}
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              onClick={() => {
+                setConfirm(false);
+                historyClear().then(load).catch(() => setFailed(true));
+              }}
+            >
+              {t.deleteAll}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {failed ? (
+        <Card>
+          <p className="text-[13px] text-[var(--s-error)]" role="alert">
+            {t.unavailable}
+          </p>
+        </Card>
+      ) : rows === null ? (
+        <Card>
+          <p className="shimmer text-[13px] text-[var(--muted)]">{t.loading}</p>
+        </Card>
+      ) : rows.length === 0 ? (
+        <Card>
+          <Empty icon={<HistoryIcon size={22} />} title={t.empty} note={t.note} />
+        </Card>
+      ) : (
+        <>
+          {rows.map((r) => {
+            const outcome = outcomeOf(r);
+            return (
+              <Card key={r.id}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-medium" title={r.project ?? r.id}>
+                      {r.project ?? shortId(r.id)}
+                    </p>
+                    <p className="mt-0.5 font-mono text-[10.5px] text-[var(--faint)]">
+                      {new Date(r.startedAt).toLocaleString()} · {elapsed(r.lastAt - r.startedAt)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="winbtn danger !h-6 !w-6 shrink-0"
+                    onClick={() => void historyDelete(r.id).then(load).catch(() => setFailed(true))}
+                    title={t.deleteOne}
+                    aria-label={t.deleteOne}
+                  >
+                    <TrashIcon size={13} />
+                  </button>
+                </div>
+                <p
+                  className="mt-2 text-[12.5px] leading-snug"
+                  style={{ color: outcome === "error" ? "var(--s-error)" : outcome === "unknown" ? "var(--muted)" : "var(--text)" }}
+                >
+                  {t.outcome[outcome]}
+                </p>
+                <div className="mt-2.5">
+                  <Label>{t.toolsLabel}</Label>
+                  {r.tools.length === 0 ? (
+                    <p className="mt-1 text-xs text-[var(--muted)]">{t.noTools}</p>
+                  ) : (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {r.tools.map((c) => (
+                        <span key={c.tool} className="chip">
+                          {c.tool}
+                          {c.ok > 0 && <span style={{ color: "var(--s-done)" }}>✓{c.ok}</span>}
+                          {c.failed > 0 && <span style={{ color: "var(--s-error)" }}>✕{c.failed}</span>}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {r.apiErrors.length > 0 && (
+                  <div className="mt-2.5">
+                    <Label>{t.errorsLabel}</Label>
+                    <p className="mt-1 font-mono text-[11px] text-[var(--s-error)]">{r.apiErrors.join(", ")}</p>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+          <p className="px-1 text-[11px] leading-relaxed text-[var(--muted)]">{t.storedNote}</p>
+        </>
+      )}
     </div>
   );
 }

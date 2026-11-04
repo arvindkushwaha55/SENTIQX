@@ -1,4 +1,6 @@
 pub mod active_window;
+pub mod history;
+pub mod lifecycle;
 pub mod normalize;
 pub mod privacy;
 pub mod receiver;
@@ -162,10 +164,50 @@ fn active_app(state: tauri::State<Privacy>) -> Option<ActiveApp> {
     state.awareness.latest.lock().ok().and_then(|l| l.clone())
 }
 
+// ---- session history (optional: the app keeps working if the database cannot open) ----
+
+struct HistoryState(Option<Arc<history::History>>);
+
+impl HistoryState {
+    fn get(&self) -> Result<&history::History, String> {
+        self.0.as_deref().ok_or_else(|| "history is unavailable".to_string())
+    }
+}
+
+#[tauri::command]
+fn history_list(state: tauri::State<HistoryState>) -> Result<Vec<history::SessionRow>, String> {
+    state.get()?.list(100)
+}
+
+#[tauri::command]
+fn history_delete(id: String, state: tauri::State<HistoryState>) -> Result<(), String> {
+    state.get()?.delete(&id)
+}
+
+#[tauri::command]
+fn history_clear(state: tauri::State<HistoryState>) -> Result<(), String> {
+    state.get()?.clear()
+}
+
+fn note(app: &tauri::AppHandle, event: &str) {
+    if let Ok(dir) = app.path().app_data_dir() {
+        lifecycle::log(&dir, receiver::now_ms(), event);
+    }
+}
+
+/// The UI reports its own close button, so a click can be told apart from an outside close.
+#[tauri::command]
+fn note_close(source: String, app: tauri::AppHandle) {
+    if let Some(event) = lifecycle::known_close_source(&source) {
+        note(&app, event);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         // Remember position and size only. Visibility is handled by us, so a saved
         // "hidden" state can never leave the user without a window.
         .plugin(
@@ -174,6 +216,9 @@ pub fn run() {
                 .build(),
         )
         .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { .. } = event {
+                note(window.app_handle(), "close requested (button, Alt+F4, taskbar or another program)");
+            }
             // Losing focus must never drop the pin.
             if let WindowEvent::Focused(false) = event
                 && window.label() == window::MAIN
@@ -185,6 +230,7 @@ pub fn run() {
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let token = random_token()?;
+            note(app.handle(), "start");
 
             // Window: apply the saved pin natively, build the tray, then show without stealing focus.
             let prefs = WindowPrefs::load(data_dir.clone());
@@ -204,9 +250,16 @@ pub fn run() {
             });
             app.manage(Privacy { prefs: Mutex::new(saved), dir: data_dir.clone(), awareness });
 
+            // History is optional: if it cannot open, monitoring still works.
+            let store = history::History::open(&data_dir.join("history.db")).ok().map(Arc::new);
+            app.manage(HistoryState(store.clone()));
+
             // Claude Code connector.
             let handle = app.handle().clone();
             let (receiver, listen_error) = match receiver::start(PORT, token.clone(), move |event| {
+                if let Some(h) = &store {
+                    let _ = h.record(&event);
+                }
                 let _ = handle.emit("activity", event);
             }) {
                 Ok(r) => (Some(r), None),
@@ -247,6 +300,10 @@ pub fn run() {
             awareness_prefs,
             set_awareness,
             active_app,
+            history_list,
+            history_delete,
+            history_clear,
+            note_close,
             window::window_pinned,
             window::set_window_pinned
         ])
@@ -254,10 +311,11 @@ pub fn run() {
         .expect("error while building tauri application");
 
     app.run(|handle, event| {
-        if let RunEvent::Exit = event
-            && let Some(c) = handle.try_state::<Connector>()
-        {
-            let _ = c.release_hooks();
+        if let RunEvent::Exit = event {
+            note(handle, "exit");
+            if let Some(c) = handle.try_state::<Connector>() {
+                let _ = c.release_hooks();
+            }
         }
     });
 }

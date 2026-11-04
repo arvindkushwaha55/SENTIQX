@@ -33,4 +33,8 @@ const run = (f: () => Promise<void>) => void f().catch(() => undefined);
 
 /** Hide keeps the app and monitoring running; the tray icon brings the window back. */
 export const hideWindow = () => run(() => getCurrentWindow().hide());
-export const closeWindow = () => run(() => getCurrentWindow().close());
+export const closeWindow = (trusted: boolean) =>
+  run(async () => {
+    await invoke<void>("note_close", { source: trusted ? "title-bar-button" : "title-bar-button-untrusted" }).catch(() => undefined);
+    await getCurrentWindow().close();
+  });
