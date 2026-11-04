@@ -39,8 +39,8 @@ These use `claude -p`, not the VS Code panel. Run them with `cargo test --test r
 
 ## Not verified yet
 
-- **The Connect button with your real settings file.** Automated tests deliberately do not touch `~/.claude/settings.json`, so this needs one manual try.
-- **The VS Code panel.** The hook tests use the CLI. Older public reports say some hook events did not fire in the panel, so the app shows a hint if no event arrives within 20 seconds.
+- **Removing hooks from your real settings file.** The Connect button was confirmed by hand: real events from a running terminal session (`entrypoint: cli`) reached the app and were saved to history, without restarting that session. Byte-for-byte removal has only been tested on temporary files.
+- **The VS Code panel.** Everything so far came from the CLI. Older public reports say some hook events did not fire in the panel, so the app shows a hint if no event arrives within 20 seconds.
 - **Permission prompts (`PermissionRequest`) in a real session.** The status logic is unit-tested only.
 - **Notifications appearing on screen.** The decision logic is unit-tested. Whether Windows displays them from the unpackaged exe has not been seen, and an installer may be needed.
 - **A real click on the tray icon.** The test sent the same message Windows sends, without a physical click.
