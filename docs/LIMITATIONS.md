@@ -64,9 +64,16 @@ These use `claude -p`, not the VS Code panel. Run them with `cargo test --test r
 
 It is local and rule-based. It finds question marks, request phrases, dates and frequently used words, and quotes only text you pasted. It cannot write a meaning-based summary like "the team discussed the deadline", because no AI model is connected. It says this on screen. Instagram has no export format of its own in the parser, so pasted text from it is read as plain or `Name: text` messages.
 
+## Intent Guard (Phase 1)
+
+- Checks only text the user pastes in or copies themselves, against the active app's category. It warns on a high-confidence shape mismatch (development prompt headed for a chat app, personal message headed for a coding app, secret-looking text headed outside coding tools) and never blocks, sends or edits anything.
+- The classifier and matcher are unit-tested, including the case of casually chatting about code with a friend, which must not warn. It has **not** yet been verified inside the real Windows build, and clipboard reading there depends on WebView2 focus/permission (paste is the fallback).
+- It does not know the recipient or conversation inside WhatsApp, email or any other app — only the application's category. See `docs/INTENT_GUARD.md`.
+
 ## Not built yet
 
 - AI summaries through an LLM provider, with redaction and consent
 - Automatic detection of local dev servers
 - Reading app content through UI Automation
 - Installer
+- Intent Guard recipient-level detection or a switch-to-app action
