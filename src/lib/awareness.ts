@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useState } from "react";
 import type { ActiveApp } from "./appContext";
+import type { ZoneWindow } from "./zones";
 
 export interface AwarenessPrefs {
   asked: boolean;
@@ -75,4 +76,27 @@ export function useAwareness() {
   }, []);
 
   return { prefs, app, recent, failed, update };
+}
+
+/** Every real window with its bounds, for Workspace Zone Awareness.
+ *  Shares the awareness permission: the watcher only runs while it is on. */
+export function useZoneWindows(): ZoneWindow[] {
+  const [windows, setWindows] = useState<ZoneWindow[]>([]);
+
+  useEffect(() => {
+    let stop: (() => void) | null = null;
+    let cancelled = false;
+    listen<ZoneWindow[]>("zone-windows", (msg) => setWindows(msg.payload))
+      .then((un) => {
+        if (cancelled) un();
+        else stop = un;
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
+  }, []);
+
+  return windows;
 }

@@ -6,6 +6,7 @@ import { buildSummary } from "../lib/summary";
 import type { SessionState, Status } from "../lib/types";
 import type { View } from "./NavBar";
 import { Orb } from "./Orb";
+import { ZoneCard } from "./ZoneCard";
 import { AppIcon, ChatIcon, CheckIcon, CloseIcon, CodeIcon, EyeIcon, GearIcon, GlobeIcon, PulseIcon, ShieldIcon, TerminalIcon } from "./icons";
 import { Button, Card, Chip, Label } from "./ui";
 
@@ -130,6 +131,8 @@ export function HomeView({ d, s, status, now, prefs, app, recent, awarenessFaile
             <p className="shimmer text-[13px] text-[var(--muted)]">{t.detecting}</p>
           </Card>
         ))}
+
+      {prefs?.enabled && <ZoneCard d={d} app={app} />}
 
       <Card>
         <div className="flex items-center gap-3">

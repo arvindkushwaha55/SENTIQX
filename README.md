@@ -15,6 +15,7 @@ SENTIQX is a floating Windows desktop companion. It shows which application you 
 | **Error explanations** | What happened, what it means, and whether you need to act, with the original details available. |
 | **Communication Intelligence** | Paste a chat or email thread, review it, and get questions, action items, dates and pending replies. Runs locally and is rule-based. |
 | **Intent Guard** | Check a message before it goes to the wrong app. You paste or copy the text yourself; Guard compares its shape (development prompt, formal email, personal note, secret-like) with the active app's category and only warns — it never sends, blocks or edits. See [docs/INTENT_GUARD.md](docs/INTENT_GUARD.md). |
+| **Workspace zones** | Splits the screen into 2 halves or 4 quadrants and shows which app sits in the zone where SENTIQX is placed, with a mini grid of all zones. Opt-in, on top of app detection; a shared zone is shown as not clear instead of a guess. See [docs/ZONES.md](docs/ZONES.md). |
 | **Live preview** | Shows your real local dev server (`localhost` only) inside the panel. |
 | **Session history** | Stored locally in SQLite, with delete one and delete all. |
 | **Floating window** | Native always-on-top with pin/unpin, drag, resize, hide to tray, and remembered position and size. |

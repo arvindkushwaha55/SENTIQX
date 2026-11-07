@@ -19,6 +19,30 @@ pub enum Category {
     Other,
 }
 
+/// A window rectangle in physical screen pixels (Win32 `GetWindowRect`).
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+pub struct Rect {
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+}
+
+/// One real application window with its bounds, for Workspace Zone Awareness.
+/// Same evidence level as `ActiveApp` (name + category only); the rectangle says
+/// where the window sits, never what is inside it.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoneWindow {
+    pub exe: String,
+    pub name: String,
+    pub category: Category,
+    /// Only present when the user allowed window titles.
+    pub title: Option<String>,
+    pub pid: u32,
+    pub rect: Rect,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ActiveApp {
@@ -127,14 +151,15 @@ pub fn build(exe: &str, title: Option<String>, pid: u32, show_title: bool) -> Ac
 
 #[cfg(windows)]
 mod win {
-    use windows_sys::Win32::Foundation::{CloseHandle, HWND, LPARAM};
+    use windows_sys::Win32::Foundation::{CloseHandle, HWND, LPARAM, RECT};
     use windows_sys::Win32::Graphics::Dwm::{DWMWA_CLOAKED, DwmGetWindowAttribute};
     use windows_sys::Win32::System::Threading::{
         OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         EnumChildWindows, EnumWindows, GWL_EXSTYLE, GetClassNameW, GetForegroundWindow, GetWindowLongW,
-        GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, WS_EX_TOOLWINDOW,
+        GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible,
+        WS_EX_TOOLWINDOW,
     };
 
     pub struct Raw {
@@ -234,6 +259,36 @@ mod win {
         read(state.1)
     }
 
+    fn rect_of(hwnd: HWND) -> Option<super::Rect> {
+        let mut r = RECT::default();
+        if unsafe { GetWindowRect(hwnd, &mut r) } == 0 {
+            return None;
+        }
+        Some(super::Rect { x: r.left, y: r.top, w: r.right - r.left, h: r.bottom - r.top })
+    }
+
+    unsafe extern "system" fn collect_all(hwnd: HWND, lparam: LPARAM) -> i32 {
+        let out = unsafe { &mut *(lparam as *mut (u32, Vec<HWND>)) };
+        if pid_of(hwnd) != out.0 && is_real_app_window(hwnd) && !super::is_shell_class(&class_of(hwnd)) {
+            out.1.push(hwnd);
+        }
+        1 // keep enumerating: zones need every window, not just the top one
+    }
+
+    /// Every real application window (top-most first), with its bounds in physical
+    /// pixels. SENTIQX's own windows are excluded.
+    pub fn all_windows(own_pid: u32) -> Vec<(Raw, super::Rect)> {
+        let mut state: (u32, Vec<HWND>) = (own_pid, Vec::new());
+        unsafe { EnumWindows(Some(collect_all), &mut state as *mut _ as LPARAM) };
+        let mut out = Vec::new();
+        for hwnd in state.1 {
+            if let (Some(raw), Some(rect)) = (read(hwnd), rect_of(hwnd)) {
+                out.push((raw, rect));
+            }
+        }
+        out
+    }
+
     fn read(hwnd: HWND) -> Option<Raw> {
         if hwnd.is_null() || super::is_shell_class(&class_of(hwnd)) {
             return None;
@@ -280,6 +335,32 @@ pub fn top_other(own_pid: u32, show_title: bool) -> Option<ActiveApp> {
     }
 }
 
+/// All real application windows with their bounds, for zone awareness.
+pub fn all_windows(own_pid: u32, show_title: bool) -> Vec<ZoneWindow> {
+    #[cfg(windows)]
+    {
+        win::all_windows(own_pid)
+            .into_iter()
+            .filter_map(|(raw, rect)| {
+                let app = from_raw(raw, show_title)?;
+                Some(ZoneWindow {
+                    exe: app.exe,
+                    name: app.name,
+                    category: app.category,
+                    title: app.title,
+                    pid: app.pid,
+                    rect,
+                })
+            })
+            .collect()
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (own_pid, show_title);
+        Vec::new()
+    }
+}
+
 /// Shared switches and the latest reading. The poll loop does nothing while `enabled` is false.
 pub struct Awareness {
     pub enabled: AtomicBool,
@@ -303,9 +384,11 @@ pub fn spawn_watcher(
     state: std::sync::Arc<Awareness>,
     own_pid: u32,
     on_change: impl Fn(Option<ActiveApp>) + Send + 'static,
+    on_windows: impl Fn(Vec<ZoneWindow>) + Send + 'static,
 ) -> std::io::Result<()> {
     std::thread::Builder::new().name("sentiqx-active-window".into()).spawn(move || {
         let mut last: Option<ActiveApp> = None;
+        let mut last_windows: Vec<ZoneWindow> = Vec::new();
         let mut was_enabled = false;
         loop {
             std::thread::sleep(Duration::from_millis(700));
@@ -318,11 +401,22 @@ pub fn spawn_watcher(
                         *l = None;
                     }
                     on_change(None);
+                    if !last_windows.is_empty() {
+                        last_windows = Vec::new();
+                        on_windows(Vec::new());
+                    }
                 }
                 continue;
             }
             was_enabled = true;
             let titles = state.show_titles.load(Ordering::SeqCst);
+            // Zone awareness shares the same poll: every real window, with bounds.
+            // Emitted only when the set actually changed, like the foreground app.
+            let windows = all_windows(own_pid, titles);
+            if windows != last_windows {
+                on_windows(windows.clone());
+                last_windows = windows;
+            }
             let Some(mut now) = current(titles) else { continue };
             if now.pid == own_pid {
                 // SENTIQX is in front. Keep the last real app; if there is none yet (the user

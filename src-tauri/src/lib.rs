@@ -245,9 +245,17 @@ pub fn run() {
             let saved = privacy::load(&data_dir);
             let awareness = Arc::new(Awareness::new(saved.enabled, saved.enabled && saved.show_titles));
             let emitter = app.handle().clone();
-            let _ = active_window::spawn_watcher(awareness.clone(), std::process::id(), move |a| {
-                let _ = emitter.emit("active-app", a);
-            });
+            let zone_emitter = app.handle().clone();
+            let _ = active_window::spawn_watcher(
+                awareness.clone(),
+                std::process::id(),
+                move |a| {
+                    let _ = emitter.emit("active-app", a);
+                },
+                move |w| {
+                    let _ = zone_emitter.emit("zone-windows", w);
+                },
+            );
             app.manage(Privacy { prefs: Mutex::new(saved), dir: data_dir.clone(), awareness });
 
             // History is optional: if it cannot open, monitoring still works.
