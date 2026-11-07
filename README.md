@@ -14,6 +14,7 @@ SENTIQX is a floating Windows desktop companion. It shows which application you 
 | **Claude Code monitoring** | Live status (Working, Waiting for user, Stuck, Error, Done), a three-line summary and recent activity, from official Claude Code hooks. |
 | **Error explanations** | What happened, what it means, and whether you need to act, with the original details available. |
 | **Communication Intelligence** | Paste a chat or email thread, review it, and get questions, action items, dates and pending replies. Runs locally and is rule-based. |
+| **Intent Guard** | Check a message before it goes to the wrong app. You paste or copy the text yourself; Guard compares its shape (development prompt, formal email, personal note, secret-like) with the active app's category and only warns — it never sends, blocks or edits. See [docs/INTENT_GUARD.md](docs/INTENT_GUARD.md). |
 | **Live preview** | Shows your real local dev server (`localhost` only) inside the panel. |
 | **Session history** | Stored locally in SQLite, with delete one and delete all. |
 | **Floating window** | Native always-on-top with pin/unpin, drag, resize, hide to tray, and remembered position and size. |
