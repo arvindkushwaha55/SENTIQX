@@ -3,6 +3,7 @@ import "./App.css";
 import { Consent } from "./components/Consent";
 import { DemoBar } from "./components/DemoBar";
 import { HomeView } from "./components/HomeView";
+import { GuardView } from "./components/GuardView";
 import { IntelView } from "./components/IntelView";
 import { LiveView } from "./components/LiveView";
 import { NavBar, type View } from "./components/NavBar";
@@ -187,6 +188,9 @@ function App() {
         </div>
         <div hidden={view !== "intel"}>
           <IntelView d={d} />
+        </div>
+        <div hidden={view !== "guard"}>
+          <GuardView d={d} app={awareness.app} />
         </div>
         <div hidden={view !== "history"}>
           <HistoryView d={d} active={view === "history"} version={state.feed.length} />
