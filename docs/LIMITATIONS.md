@@ -6,6 +6,8 @@ Last checked on 4 November 2026 against Claude Code 2.1.317 on Windows 11 with t
 
 **Active application.** Documented Win32 calls (`GetForegroundWindow`, `QueryFullProcessImageNameW`, `GetWindowTextW`), polled every 0.7 seconds while detection is on. This gives the app's name and, if you allow it, the window title. It does not give the app's content. Windows UI Automation could read content from some apps, but SENTIQX does not use it yet.
 
+**Workspace zones.** The same poll also enumerates every real window with its bounds (`EnumWindows`, `GetWindowRect`). Zones are pure geometry over the current monitor's work area; see [ZONES.md](ZONES.md). The zone maths is unit-tested, but the bounds enumeration has **not yet been verified in a real Windows build**.
+
 **Claude Code.** Temporary HTTP hooks in your user-level `~/.claude/settings.json`, posting to `127.0.0.1:47821/event` with a per-run secret token. They are removed on Stop, on app exit, and on the next launch after a crash.
 
 Only these hook fields are read: event name, session ID, tool name, tool-use ID, interrupt flag, the working folder's last name, and a shortened error message for failures. Prompts, tool input, tool output and file contents are never read.
@@ -45,6 +47,7 @@ These use `claude -p`, not the VS Code panel. Run them with `cargo test --test r
 - **Notifications appearing on screen.** The decision logic is unit-tested. Whether Windows displays them from the unpackaged exe has not been seen, and an installer may be needed.
 - **A real click on the tray icon.** The test sent the same message Windows sends, without a physical click.
 - **Your own Chrome and VS Code profiles.** Tests used temporary profiles so your windows were not touched.
+- **Workspace Zone Awareness on a real desktop.** The zone card, window-bounds enumeration and multi-window readings are unit-tested at the geometry level only; split-screen behaviour on a real Windows desktop (snap layouts, multiple monitors, mixed DPI) has not been seen yet.
 
 ## Known limits
 
@@ -58,6 +61,7 @@ These use `claude -p`, not the VS Code panel. Run them with `cargo test --test r
 - "Current task" is the kind of action, such as running a command. SENTIQX does not read task names.
 - Another always-on-top window can still cover SENTIQX, because Windows orders topmost windows among themselves. Exclusive full-screen apps may also cover it.
 - The live preview needs a local address typed in by hand. A page that blocks embedding stays blank.
+- Workspace zones come from window rectangles only: Windows does not expose snap-layout state to apps, minimised windows vanish from their zone, only the monitor SENTIQX sits on is mapped, and a zone shared almost equally by two windows is reported as not clear rather than guessed.
 - WebView2 is what uses most of the memory.
 
 ## Communication Intelligence is not AI yet
