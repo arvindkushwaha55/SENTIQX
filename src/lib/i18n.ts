@@ -23,7 +23,7 @@ export interface Dict {
   status: Record<Status, string>;
   statusNone: string;
   monitorBadge: { off: string; on: string; paused: string };
-  nav: { home: string; live: string; intel: string; history: string; settings: string; back: string };
+  nav: { home: string; live: string; intel: string; guard: string; history: string; settings: string; back: string };
   home: {
     greeting: { morning: string; afternoon: string; evening: string; night: string };
     working: (app: string) => string;
@@ -249,6 +249,34 @@ export interface Dict {
     stuckBody: string;
     doneTitle: string;
   };
+  guard: {
+    title: string;
+    subtitle: string;
+    pasteLabel: string;
+    placeholder: string;
+    check: string;
+    clear: string;
+    fromClipboard: string;
+    clipboardFailed: string;
+    destLabel: string;
+    destAuto: (app: string) => string;
+    destUnknown: string;
+    destManual: string;
+    thresholdLabel: string;
+    thresholds: { off: string; high: string; all: string };
+    beepLabel: string;
+    warnTitle: string;
+    warnBody: (intent: string, dest: string) => string;
+    reasons: Record<string, string>;
+    okTitle: string;
+    okBody: (intent: string) => string;
+    intentLabels: Record<string, string>;
+    thisIsFine: string;
+    dismiss: string;
+    fineSaved: string;
+    secretsNote: (n: number) => string;
+    privacyLines: string[];
+  };
 }
 
 const list = (items: string[], and: string) =>
@@ -265,7 +293,7 @@ const en: Dict = {
   },
   statusNone: "NO STATUS YET",
   monitorBadge: { off: "Not monitoring", on: "Monitoring", paused: "Paused" },
-  nav: { home: "Home", live: "Claude", intel: "Intel", history: "History", settings: "Settings", back: "Back" },
+  nav: { home: "Home", live: "Claude", intel: "Intel", guard: "Guard", history: "History", settings: "Settings", back: "Back" },
   home: {
     greeting: { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening", night: "Working late" },
     working: (a) => `You're currently working in ${a}.`,
@@ -597,6 +625,54 @@ const en: Dict = {
     stuckBody: "No activity for a while. This is only a suspicion, so check the Claude window.",
     doneTitle: "Claude finished",
   },
+  guard: {
+    title: "Intent Guard",
+    subtitle: "Check a message before it goes to the wrong app. You paste or copy the text yourself — Guard never reads other apps.",
+    pasteLabel: "Message you are about to send",
+    placeholder: "Paste the message here, or use the clipboard button after copying it...",
+    check: "Check destination",
+    clear: "Clear",
+    fromClipboard: "Use clipboard",
+    clipboardFailed: "Could not read the clipboard. Paste the text instead.",
+    destLabel: "It is going to",
+    destAuto: (app) => `${app} (app in front now)`,
+    destUnknown: "No app detected — choose the destination kind yourself.",
+    destManual: "Choose destination kind",
+    thresholdLabel: "Warn me",
+    thresholds: { off: "Never", high: "Only when sure", all: "More often" },
+    beepLabel: "Beep on warning",
+    warnTitle: "Possible destination mismatch",
+    warnBody: (intent, dest) => `This looks like ${intent}, but it is headed for ${dest}. Check once before sending.`,
+    reasons: {
+      "prompt-shape": "it is written like a development instruction",
+      "chat-destination": "the destination is a chat app",
+      "browser-destination": "the destination is a browser",
+      "personal-shape": "it reads like a personal, family message",
+      "formal-shape": "it reads like a formal email or application",
+      "coding-destination": "the destination is a coding or terminal app",
+      "secret-like-text": "it contains secret-looking text (password, code or key)",
+      "secret-destination": "secrets are risky in this destination",
+    },
+    okTitle: "Looks fine",
+    okBody: (intent) => `No clear mismatch found. Detected shape: ${intent}.`,
+    intentLabels: {
+      "coding-prompt": "a Claude / development prompt",
+      professional: "a formal email or application",
+      personal: "a personal message",
+      sensitive: "sensitive, secret-like content",
+      unknown: "nothing specific",
+    },
+    thisIsFine: "This is fine, don't warn me for this pair",
+    dismiss: "Dismiss",
+    fineSaved: "Saved. This intent + destination pair will not warn again.",
+    secretsNote: (n) => `${n} secret-looking ${n === 1 ? "item was" : "items were"} hidden before checking. The original text is never stored.`,
+    privacyLines: [
+      "Guard only checks text you paste or copy yourself. It never reads WhatsApp, email or any other app.",
+      "The check runs on this computer, with simple rules — no AI model, nothing sent anywhere.",
+      "Your message text is never saved. Only your warning settings and 'this is fine' choices are kept.",
+      "Guard only warns. It never sends, blocks or changes a message.",
+    ],
+  },
 };
 
 const hinglish: Dict = {
@@ -610,7 +686,7 @@ const hinglish: Dict = {
   },
   statusNone: "ABHI STATUS NAHI",
   monitorBadge: { off: "Monitoring band", on: "Monitoring chalu", paused: "Paused" },
-  nav: { home: "Home", live: "Claude", intel: "Intel", history: "History", settings: "Settings", back: "Wapas" },
+  nav: { home: "Home", live: "Claude", intel: "Intel", guard: "Guard", history: "History", settings: "Settings", back: "Wapas" },
   home: {
     greeting: { morning: "Suprabhat", afternoon: "Namaste", evening: "Shubh sandhya", night: "Der raat tak kaam" },
     working: (a) => `Aap abhi ${a} mein kaam kar rahe ho.`,
@@ -947,6 +1023,54 @@ const hinglish: Dict = {
     stuckTitle: "Claude shayad atka hua hai",
     stuckBody: "Kaafi der se koi activity nahi. Ye sirf shak hai, Claude window dekh lo.",
     doneTitle: "Claude ne kaam khatam kiya",
+  },
+  guard: {
+    title: "Intent Guard",
+    subtitle: "Message galat app me jaane se pehle check kar lo. Text tum khud paste ya copy karte ho — Guard doosre apps ko kabhi nahi padhta.",
+    pasteLabel: "Message jo tum bhejne wale ho",
+    placeholder: "Message yahan paste karo, ya copy karke clipboard wala button dabao...",
+    check: "Destination check karo",
+    clear: "Saaf karo",
+    fromClipboard: "Clipboard se lo",
+    clipboardFailed: "Clipboard nahi padh paya. Text paste kar do.",
+    destLabel: "Ye ja raha hai",
+    destAuto: (app) => `${app} (abhi saamne wala app)`,
+    destUnknown: "Koi app detect nahi hua — destination ki kind khud chuno.",
+    destManual: "Destination kind chuno",
+    thresholdLabel: "Warning kab mile",
+    thresholds: { off: "Kabhi nahi", high: "Sirf pakka ho tab", all: "Thoda zyada" },
+    beepLabel: "Warning par beep",
+    warnTitle: "Shayad galat destination hai",
+    warnBody: (intent, dest) => `Ye ${intent} lagta hai, lekin ja raha hai ${dest} ki taraf. Bhejne se pehle ek baar dekh lo.`,
+    reasons: {
+      "prompt-shape": "ye development instruction jaisa likha hai",
+      "chat-destination": "destination ek chat app hai",
+      "browser-destination": "destination ek browser hai",
+      "personal-shape": "ye personal, family wala message lagta hai",
+      "formal-shape": "ye formal email ya application jaisa lagta hai",
+      "coding-destination": "destination coding ya terminal app hai",
+      "secret-like-text": "isme secret jaisi cheez hai (password, code ya key)",
+      "secret-destination": "is destination me secret bhejna risky hai",
+    },
+    okTitle: "Theek lag raha hai",
+    okBody: (intent) => `Koi saaf mismatch nahi mila. Pehchani gayi shape: ${intent}.`,
+    intentLabels: {
+      "coding-prompt": "Claude / development prompt",
+      professional: "formal email ya application",
+      personal: "personal message",
+      sensitive: "sensitive, secret jaisi content",
+      unknown: "kuch khaas nahi",
+    },
+    thisIsFine: "Ye sahi hai, is pair par dobara warning mat do",
+    dismiss: "Band karo",
+    fineSaved: "Save ho gaya. Is intent + destination pair par ab warning nahi aayegi.",
+    secretsNote: (n) => `Check se pehle ${n} secret jaisi ${n === 1 ? "cheez chhupayi gayi" : "cheezein chhupayi gayin"}. Asli text kabhi save nahi hota.`,
+    privacyLines: [
+      "Guard sirf wahi text check karta hai jo tum khud paste ya copy karte ho. Ye WhatsApp, email ya koi aur app kabhi nahi padhta.",
+      "Check isi computer par hota hai, simple rules se — koi AI model nahi, kuch kahin bheja nahi jata.",
+      "Tumhara message text kabhi save nahi hota. Sirf warning settings aur 'ye sahi hai' wali choices rehti hain.",
+      "Guard sirf warning deta hai. Ye kabhi message bhejta, rokta ya badalta nahi hai.",
+    ],
   },
 };
 
