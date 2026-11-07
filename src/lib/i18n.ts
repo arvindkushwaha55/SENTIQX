@@ -52,6 +52,23 @@ export interface Dict {
     recentEmpty: string;
     quickTitle: string;
     quick: { claude: string; intel: string; preview: string; settings: string };
+    zones: {
+      title: string;
+      body: string;
+      turnOn: string;
+      turnOff: string;
+      layout2: string;
+      layout4: string;
+      youAreIn: (zone: string) => string;
+      occupant: (app: string) => string;
+      empty: string;
+      ambiguous: string;
+      unsplit: string;
+      otherScreen: string;
+      detecting: string;
+      active: string;
+      names: Record<"left" | "right" | "top-left" | "top-right" | "bottom-left" | "bottom-right", string>;
+    };
   };
   controls: { start: string; pause: string; resume: string; stop: string };
   connectorNotReady: string;
@@ -336,6 +353,30 @@ const en: Dict = {
     recentEmpty: "Your app switches will appear here. They are not saved.",
     quickTitle: "Quick access",
     quick: { claude: "Claude Code", intel: "Summarise chat", preview: "Live preview", settings: "Settings" },
+    zones: {
+      title: "Workspace zones",
+      body: "Shows the app sitting in the part of the screen where SENTIQX itself is placed.",
+      turnOn: "Turn on",
+      turnOff: "Turn off",
+      layout2: "2 zones",
+      layout4: "4 zones",
+      youAreIn: (zone) => `SENTIQX is in the ${zone} zone`,
+      occupant: (app) => `${app} is in this zone`,
+      empty: "No clear app in this zone",
+      ambiguous: "Two apps share this zone — not clear",
+      unsplit: "No split detected — one app fills the screen",
+      otherScreen: "SENTIQX is on a different screen",
+      detecting: "Finding zones…",
+      active: "Active",
+      names: {
+        left: "Left",
+        right: "Right",
+        "top-left": "Top left",
+        "top-right": "Top right",
+        "bottom-left": "Bottom left",
+        "bottom-right": "Bottom right",
+      },
+    },
   },
   controls: { start: "Connect Claude Code", pause: "Pause", resume: "Resume", stop: "Stop" },
   connectorNotReady: "SENTIQX could not open its local receiver, so monitoring cannot start.",
@@ -729,6 +770,30 @@ const hinglish: Dict = {
     recentEmpty: "Aapke app switches yahan dikhenge. Ye save nahi hote.",
     quickTitle: "Quick access",
     quick: { claude: "Claude Code", intel: "Chat ki summary", preview: "Live preview", settings: "Settings" },
+    zones: {
+      title: "Workspace zones",
+      body: "Screen ke jis hisse mein SENTIQX rakha hai, wahan wali app dikhata hai.",
+      turnOn: "Chalu karo",
+      turnOff: "Band karo",
+      layout2: "2 zone",
+      layout4: "4 zone",
+      youAreIn: (zone) => `SENTIQX ${zone} zone mein hai`,
+      occupant: (app) => `Is zone mein ${app} hai`,
+      empty: "Is zone mein koi saaf app nahi",
+      ambiguous: "Do apps is zone ko baant rahe hain — saaf nahi",
+      unsplit: "Koi split nahi mila — ek hi app puri screen par hai",
+      otherScreen: "SENTIQX dusri screen par hai",
+      detecting: "Zones dhoondh rahe hain…",
+      active: "Active",
+      names: {
+        left: "Left",
+        right: "Right",
+        "top-left": "Upar left",
+        "top-right": "Upar right",
+        "bottom-left": "Neeche left",
+        "bottom-right": "Neeche right",
+      },
+    },
   },
   controls: {
     start: "Claude Code connect karo",
