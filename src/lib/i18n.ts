@@ -23,7 +23,7 @@ export interface Dict {
   status: Record<Status, string>;
   statusNone: string;
   monitorBadge: { off: string; on: string; paused: string };
-  nav: { home: string; live: string; intel: string; history: string; settings: string; back: string };
+  nav: { home: string; live: string; debug: string; intel: string; history: string; settings: string; back: string };
   home: {
     greeting: { morning: string; afternoon: string; evening: string; night: string };
     working: (app: string) => string;
@@ -249,6 +249,52 @@ export interface Dict {
     stuckBody: string;
     doneTitle: string;
   };
+  debug: {
+    title: string;
+    subtitle: string;
+    setupTitle: string;
+    setupSteps: string[];
+    setupPrivacy: string;
+    source: { diagnostic: string; rule: string; ai: string };
+    confidence: { reported: string; high: string; medium: string; low: string };
+    confidenceLabel: string;
+    lines: (start: number, end: number) => string;
+    line: (n: number) => string;
+    trigger: { selection: string; auto: string };
+    noFindings: string;
+    noRulesFor: (language: string) => string;
+    forget: string;
+    actions: { explain: string; hideExplain: string; showFix: string; hideFix: string; copyFix: string; copied: string; apply: string; ignore: string };
+    why: string;
+    how: string;
+    sideEffects: string;
+    noSideEffects: string;
+    diagnosticWhy: string;
+    diagnosticHow: string;
+    noFixAvailable: string;
+    fixTitle: string;
+    fixUnverified: string;
+    applyConfirm: string;
+    applyGo: string;
+    applyCancel: string;
+    applyWaiting: string;
+    applyResult: { applied: string; declined: string; stale: string; not_found: string };
+    applyFailed: (reason: string) => string;
+    ignoredCount: (n: number) => string;
+    showIgnored: string;
+    ai: {
+      title: string;
+      consent: string;
+      hiddenNote: (n: number) => string;
+      run: string;
+      running: string;
+      none: string;
+      dropped: (n: number) => string;
+      failed: (reason: string) => string;
+      languageChanged: string;
+    };
+    rules: Record<string, { title: string; why: string; how: string; sideEffects?: string }>;
+  };
 }
 
 const list = (items: string[], and: string) =>
@@ -265,7 +311,7 @@ const en: Dict = {
   },
   statusNone: "NO STATUS YET",
   monitorBadge: { off: "Not monitoring", on: "Monitoring", paused: "Paused" },
-  nav: { home: "Home", live: "Claude", intel: "Intel", history: "History", settings: "Settings", back: "Back" },
+  nav: { home: "Home", live: "Claude", debug: "Debug", intel: "Intel", history: "History", settings: "Settings", back: "Back" },
   home: {
     greeting: { morning: "Good morning", afternoon: "Good afternoon", evening: "Good evening", night: "Working late" },
     working: (a) => `You're currently working in ${a}.`,
@@ -597,6 +643,132 @@ const en: Dict = {
     stuckBody: "No activity for a while. This is only a suspicion, so check the Claude window.",
     doneTitle: "Claude finished",
   },
+  debug: {
+    title: "Smart Debug",
+    subtitle: "Select code in your editor and see what might be wrong, and how sure SENTIQX is.",
+    setupTitle: "How to start",
+    setupSteps: [
+      "Install the SENTIQX extension in VS Code.",
+      "Select the code you want checked.",
+      "Right-click and choose SENTIQX: Analyse Selection.",
+    ],
+    setupPrivacy: "Code is read only when you run that command. It stays in memory on this computer and is never saved.",
+    source: { diagnostic: "Reported by tool", rule: "Pattern match", ai: "AI suspected" },
+    confidence: { reported: "reported", high: "high", medium: "medium", low: "low" },
+    confidenceLabel: "Confidence",
+    lines: (s, e) => (s === e ? `Line ${s}` : `Lines ${s}-${e}`),
+    line: (n) => `Line ${n}`,
+    trigger: { selection: "Your selection", auto: "After save" },
+    noFindings: "No tool errors or known risky patterns here. This does not prove the code is correct.",
+    noRulesFor: (l) => `No pattern checks for ${l} yet. Tool errors and the AI review still work.`,
+    forget: "Forget this code",
+    actions: { explain: "Explain", hideExplain: "Hide", showFix: "Show Fix", hideFix: "Hide Fix", copyFix: "Copy Fix", copied: "Copied", apply: "Apply Fix", ignore: "Ignore" },
+    why: "Why it may be wrong",
+    how: "How to improve it",
+    sideEffects: "Possible side effects",
+    noSideEffects: "None known, but check the code around it.",
+    diagnosticWhy: "Your editor's language tools reported this line. The message above is their exact wording.",
+    diagnosticHow: "Read the message, then correct that line. The AI review can explain it further.",
+    noFixAvailable: "No safe automatic fix for this one.",
+    fixTitle: "Suggested change",
+    fixUnverified: "Not verified: this change has not been run or tested.",
+    applyConfirm: "VS Code will show this change and ask you again. Nothing is saved automatically, and you can undo it.",
+    applyGo: "Send to VS Code",
+    applyCancel: "Cancel",
+    applyWaiting: "Waiting for your answer in VS Code...",
+    applyResult: {
+      applied: "Applied in VS Code, not saved yet. Press Ctrl+Z there to undo.",
+      declined: "You declined it in VS Code. Nothing changed.",
+      stale: "The file changed, so nothing was applied. Analyse the code again.",
+      not_found: "That code could not be found exactly once, so nothing was applied.",
+    },
+    applyFailed: (r) => `Could not send the fix: ${r}`,
+    ignoredCount: (n) => `${n} ignored`,
+    showIgnored: "Show",
+    ai: {
+      title: "AI review",
+      consent: "Sends this selected code to Anthropic through your Claude Code login, and uses your Claude usage. Claude gets no tools, so it can only answer.",
+      hiddenNote: (n) => `${n} secret-looking ${n === 1 ? "item" : "items"} will be hidden first. This is not perfect.`,
+      run: "Review with Claude",
+      running: "Claude is reviewing this code...",
+      none: "Claude found no problems in this selection. It can still miss things.",
+      dropped: (n) => `${n} AI ${n === 1 ? "answer was" : "answers were"} removed because the quoted code did not match.`,
+      failed: (r) => `AI review failed: ${r}`,
+      languageChanged: "The language changed. Run the review again to read it in this language.",
+    },
+    rules: {
+      "assign-in-condition": {
+        title: "Assignment inside a condition",
+        why: "A single = changes the value instead of comparing it, so this condition may not test what it looks like it tests.",
+        how: "Use === to compare. If the assignment is on purpose, wrap it in double brackets to show that.",
+        sideEffects: "If the assignment was intended, the variable will no longer be updated here.",
+      },
+      "nan-compare": {
+        title: "Comparing with NaN never works",
+        why: "NaN is not equal to anything, not even itself, so this check gives the same answer every time.",
+        how: "Use Number.isNaN() to check for NaN.",
+        sideEffects: "Number.isNaN does not convert values, so a text value gives false.",
+      },
+      "self-compare": {
+        title: "A value compared with itself",
+        why: "Comparing something with itself almost always gives the same answer, so one side is probably the wrong variable.",
+        how: "Check which two values you meant to compare.",
+      },
+      "loop-off-by-one": {
+        title: "Loop goes one step too far",
+        why: "Positions start at 0, so the last valid position is length - 1. With <= the last round reads a position that does not exist.",
+        how: "Use < instead of <=.",
+        sideEffects: "The loop runs one time fewer. Check code that relied on that extra round.",
+      },
+      "index-at-length": {
+        title: "Reading past the end of a list",
+        why: "Positions start at 0, so position length does not exist and this always gives undefined.",
+        how: "Use length - 1 to get the last item.",
+        sideEffects: "This returns a real item now. An empty list still gives undefined.",
+      },
+      "async-foreach": {
+        title: "forEach does not wait for async work",
+        why: "forEach ignores the promises, so the code after it can run before this work finishes, and errors can go unnoticed.",
+        how: "Use a for...of loop with await, or await Promise.all with map.",
+      },
+      "empty-catch": {
+        title: "Errors are silently ignored",
+        why: "This empty catch hides every error, so failures become very hard to notice and debug.",
+        how: "Log or handle the error. If ignoring it is on purpose, add a comment saying why.",
+      },
+      eval: {
+        title: "eval can run unsafe code",
+        why: "eval runs text as code. If any part of that text comes from a user, they could run anything.",
+        how: "Avoid eval. Use JSON.parse for data, or a lookup table for choosing behaviour.",
+      },
+      "hardcoded-secret": {
+        title: "Possible secret written in the code",
+        why: "A password or key in code can be read by anyone with the code, and it stays in git history.",
+        how: "Move it to an environment variable or a secret store, and replace the old value if it is real.",
+      },
+      "py-mutable-default": {
+        title: "Shared default list or dict",
+        why: "Python creates this default only once, so changes made in one call carry over to the next.",
+        how: "Use None as the default, and create the list or dict inside the function.",
+      },
+      "py-bare-except": {
+        title: "Catches every error",
+        why: "A bare except also catches things like Ctrl+C and can hide real bugs.",
+        how: "Catch the specific error you expect, or at least Exception.",
+        sideEffects: "Ctrl+C and program exit will now stop the program instead of being caught here.",
+      },
+      "py-none-compare": {
+        title: "Use is to compare with None",
+        why: "== can be changed by a class and give a wrong answer. None should be checked by identity.",
+        how: "Use is None or is not None.",
+      },
+      "py-eval": {
+        title: "eval or exec can run unsafe code",
+        why: "These run text as code. If any part of that text comes from a user, they could run anything.",
+        how: "Avoid them. Use ast.literal_eval or json.loads for data.",
+      },
+    },
+  },
 };
 
 const hinglish: Dict = {
@@ -610,7 +782,7 @@ const hinglish: Dict = {
   },
   statusNone: "ABHI STATUS NAHI",
   monitorBadge: { off: "Monitoring band", on: "Monitoring chalu", paused: "Paused" },
-  nav: { home: "Home", live: "Claude", intel: "Intel", history: "History", settings: "Settings", back: "Wapas" },
+  nav: { home: "Home", live: "Claude", debug: "Debug", intel: "Intel", history: "History", settings: "Settings", back: "Wapas" },
   home: {
     greeting: { morning: "Suprabhat", afternoon: "Namaste", evening: "Shubh sandhya", night: "Der raat tak kaam" },
     working: (a) => `Aap abhi ${a} mein kaam kar rahe ho.`,
@@ -947,6 +1119,132 @@ const hinglish: Dict = {
     stuckTitle: "Claude shayad atka hua hai",
     stuckBody: "Kaafi der se koi activity nahi. Ye sirf shak hai, Claude window dekh lo.",
     doneTitle: "Claude ne kaam khatam kiya",
+  },
+  debug: {
+    title: "Smart Debug",
+    subtitle: "Editor mein code select karo aur dekho kya galat ho sakta hai, aur SENTIQX kitna sure hai.",
+    setupTitle: "Shuru kaise karein",
+    setupSteps: [
+      "VS Code mein SENTIQX extension install karo.",
+      "Jo code check karna hai, use select karo.",
+      "Right-click karke SENTIQX: Analyse Selection chuno.",
+    ],
+    setupPrivacy: "Code sirf tab padha jata hai jab aap ye command chalate ho. Wo isi computer ki memory mein rehta hai aur kabhi save nahi hota.",
+    source: { diagnostic: "Tool ne bataya", rule: "Pattern match", ai: "AI ko shak hai" },
+    confidence: { reported: "reported", high: "high", medium: "medium", low: "low" },
+    confidenceLabel: "Confidence",
+    lines: (s, e) => (s === e ? `Line ${s}` : `Lines ${s}-${e}`),
+    line: (n) => `Line ${n}`,
+    trigger: { selection: "Aapka selection", auto: "Save ke baad" },
+    noFindings: "Yahan koi tool error ya jaana-pehchana risky pattern nahi mila. Iska matlab ye nahi ki code pakka sahi hai.",
+    noRulesFor: (l) => `${l} ke liye abhi pattern checks nahi hain. Tool errors aur AI review phir bhi chalte hain.`,
+    forget: "Ye code bhool jao",
+    actions: { explain: "Samjhao", hideExplain: "Chhupao", showFix: "Fix dikhao", hideFix: "Fix chhupao", copyFix: "Fix copy karo", copied: "Copy ho gaya", apply: "Fix lagao", ignore: "Ignore" },
+    why: "Ye galat kyun ho sakta hai",
+    how: "Kaise sudhaarein",
+    sideEffects: "Iska kya asar ho sakta hai",
+    noSideEffects: "Koi pata nahi, par aas-paas ka code dekh lena.",
+    diagnosticWhy: "Aapke editor ke language tools ne is line ko report kiya hai. Upar unka hi message hai.",
+    diagnosticHow: "Message padho aur wo line theek karo. AI review ise aur samjha sakta hai.",
+    noFixAvailable: "Iska koi safe automatic fix nahi hai.",
+    fixTitle: "Suggested badlav",
+    fixUnverified: "Verified nahi: is badlav ko chalaya ya test nahi kiya gaya.",
+    applyConfirm: "VS Code ye badlav dikhayega aur aapse dobara poochhega. Kuch apne aap save nahi hota, aur undo ho sakta hai.",
+    applyGo: "VS Code ko bhejo",
+    applyCancel: "Cancel",
+    applyWaiting: "VS Code mein aapke jawab ka intezaar hai...",
+    applyResult: {
+      applied: "VS Code mein lag gaya, abhi save nahi hua. Undo ke liye wahan Ctrl+Z dabao.",
+      declined: "Aapne VS Code mein mana kar diya. Kuch nahi badla.",
+      stale: "File badal gayi thi, isliye kuch nahi laga. Code dobara analyse karo.",
+      not_found: "Wo code theek ek jagah nahi mila, isliye kuch nahi laga.",
+    },
+    applyFailed: (r) => `Fix bhej nahi paaye: ${r}`,
+    ignoredCount: (n) => `${n} ignored`,
+    showIgnored: "Dikhao",
+    ai: {
+      title: "AI review",
+      consent: "Ye selected code aapke Claude Code login se Anthropic ko jayega, aur aapki Claude usage lagegi. Claude ko koi tool nahi milta, wo sirf jawab de sakta hai.",
+      hiddenNote: (n) => `${n} secret jaisi cheez pehle chhupayi jayegi. Ye perfect nahi hai.`,
+      run: "Claude se review karao",
+      running: "Claude ye code review kar raha hai...",
+      none: "Claude ko is selection mein koi problem nahi mili. Phir bhi kuch chhoot sakta hai.",
+      dropped: (n) => `${n} AI jawab hata diye gaye, kyunki unka quote code se match nahi hua.`,
+      failed: (r) => `AI review nahi ho paaya: ${r}`,
+      languageChanged: "Bhasha badal gayi. Is bhasha mein padhne ke liye review dobara chalao.",
+    },
+    rules: {
+      "assign-in-condition": {
+        title: "Condition ke andar assignment",
+        why: "Ek = value ko compare nahi karta, badal deta hai. To ye condition shayad wo check nahi kar rahi jo dikhti hai.",
+        how: "Compare karne ke liye === use karo. Agar assignment jaan-boojhkar hai, to use double brackets mein rakho.",
+        sideEffects: "Agar assignment jaan-boojhkar tha, to variable ab yahan update nahi hoga.",
+      },
+      "nan-compare": {
+        title: "NaN se compare karna kabhi kaam nahi karta",
+        why: "NaN kisi ke barabar nahi hota, khud ke bhi nahi. Isliye ye check har baar ek hi jawab deta hai.",
+        how: "NaN check karne ke liye Number.isNaN() use karo.",
+        sideEffects: "Number.isNaN value ko convert nahi karta, to text par false dega.",
+      },
+      "self-compare": {
+        title: "Value ka khud se comparison",
+        why: "Kisi cheez ko khud se compare karne par lagbhag hamesha ek hi jawab aata hai, to shayad ek taraf galat variable hai.",
+        how: "Dekho ki aap kin do values ko compare karna chahte the.",
+      },
+      "loop-off-by-one": {
+        title: "Loop ek step zyada chalta hai",
+        why: "Position 0 se shuru hoti hai, to aakhri sahi position length - 1 hai. <= se aakhri round aisi position padhta hai jo hai hi nahi.",
+        how: "<= ki jagah < use karo.",
+        sideEffects: "Loop ek baar kam chalega. Jo code us extra round par depend tha, use dekh lena.",
+      },
+      "index-at-length": {
+        title: "List ke end ke baad padhna",
+        why: "Position 0 se shuru hoti hai, to length wali position hoti hi nahi, aur ye hamesha undefined deta hai.",
+        how: "Aakhri item ke liye length - 1 use karo.",
+        sideEffects: "Ab asli item milega. Khaali list par abhi bhi undefined aayega.",
+      },
+      "async-foreach": {
+        title: "forEach async kaam ka wait nahi karta",
+        why: "forEach promises ko ignore karta hai, to aage ka code is kaam ke khatam hone se pehle chal sakta hai, aur errors chhup sakte hain.",
+        how: "await ke saath for...of loop use karo, ya map ke saath await Promise.all.",
+      },
+      "empty-catch": {
+        title: "Errors chupchap ignore ho rahe hain",
+        why: "Ye khaali catch har error chhupa deta hai, to failure pakadna aur debug karna bahut mushkil ho jata hai.",
+        how: "Error ko log ya handle karo. Agar ignore karna jaan-boojhkar hai, to comment mein wajah likho.",
+      },
+      eval: {
+        title: "eval unsafe code chala sakta hai",
+        why: "eval text ko code ki tarah chalata hai. Agar us text ka koi hissa user se aaye, to wo kuch bhi chala sakta hai.",
+        how: "eval se bacho. Data ke liye JSON.parse, aur behaviour chunne ke liye lookup table use karo.",
+      },
+      "hardcoded-secret": {
+        title: "Code mein shayad secret likha hai",
+        why: "Code mein likha password ya key koi bhi padh sakta hai jiske paas code ho, aur wo git history mein reh jata hai.",
+        how: "Ise environment variable ya secret store mein rakho, aur agar asli hai to purani value badal do.",
+      },
+      "py-mutable-default": {
+        title: "Shared default list ya dict",
+        why: "Python ye default sirf ek baar banata hai, to ek call mein kiya badlav agli call mein bhi rehta hai.",
+        how: "Default None rakho, aur list ya dict function ke andar banao.",
+      },
+      "py-bare-except": {
+        title: "Har error pakad leta hai",
+        why: "Khaali except Ctrl+C jaisi cheezein bhi pakad leta hai aur asli bugs chhupa sakta hai.",
+        how: "Jo error expect karte ho wahi pakdo, ya kam se kam Exception.",
+        sideEffects: "Ctrl+C aur program exit ab yahan pakde nahi jayenge, program ruk jayega.",
+      },
+      "py-none-compare": {
+        title: "None se compare ke liye is use karo",
+        why: "== ko class badal sakti hai aur galat jawab mil sakta hai. None ko identity se check karna chahiye.",
+        how: "is None ya is not None use karo.",
+      },
+      "py-eval": {
+        title: "eval ya exec unsafe code chala sakte hain",
+        why: "Ye text ko code ki tarah chalate hain. Agar us text ka koi hissa user se aaye, to wo kuch bhi chala sakta hai.",
+        how: "Inse bacho. Data ke liye ast.literal_eval ya json.loads use karo.",
+      },
+    },
   },
 };
 

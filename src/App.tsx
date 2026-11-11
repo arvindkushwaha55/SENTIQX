@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import "./App.css";
 import { Consent } from "./components/Consent";
+import { DebugView } from "./components/DebugView";
 import { DemoBar } from "./components/DemoBar";
 import { HomeView } from "./components/HomeView";
 import { IntelView } from "./components/IntelView";
@@ -129,8 +130,20 @@ function App() {
     }
   };
 
+  // The user asked for this analysis, so show it. Automatic ones only add a quiet dot.
+  const [debugDot, setDebugDot] = useState(false);
+  const onEditorContext = useCallback((trigger: "selection" | "auto") => {
+    if (trigger === "selection") {
+      setView("debug");
+      mainRef.current?.scrollTo(0, 0);
+    } else {
+      setDebugDot(true);
+    }
+  }, []);
+
   const navigate = (v: View, anchor?: string) => {
     setView(v);
+    if (v === "debug") setDebugDot(false);
     // Wait for the tab to become visible before scrolling.
     requestAnimationFrame(() => {
       if (anchor) document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -185,6 +198,9 @@ function App() {
             onStop={() => void control("stop")}
           />
         </div>
+        <div hidden={view !== "debug"}>
+          <DebugView d={d} lang={lang} onContext={onEditorContext} />
+        </div>
         <div hidden={view !== "intel"}>
           <IntelView d={d} />
         </div>
@@ -225,7 +241,7 @@ function App() {
         </div>
       )}
 
-      <NavBar d={d} view={view} onChange={navigate} />
+      <NavBar d={d} view={view} onChange={navigate} dot={debugDot ? "debug" : null} />
 
       {askConsent && (
         <Consent d={d} onCancel={() => setAskConsent(false)} onAllow={() => void begin()} />

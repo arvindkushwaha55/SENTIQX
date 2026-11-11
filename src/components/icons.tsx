@@ -125,6 +125,12 @@ export const SparkIcon = (p: P) => (
     <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" />
   </Svg>
 );
+export const BugIcon = (p: P) => (
+  <Svg {...p}>
+    <rect x="8" y="8" width="8" height="12" rx="4" />
+    <path d="M9.5 8a2.5 2.5 0 0 1 5 0M12 12v8M4 13h4M16 13h4M5 7l3.2 2.5M19 7l-3.2 2.5M5 20l3.2-2.5M19 20l-3.2-2.5" />
+  </Svg>
+);
 export const HomeIcon = (p: P) => (
   <Svg {...p}>
     <path d="M4 11l8-7 8 7v9h-5.5v-5.5h-5V20H4v-9z" />

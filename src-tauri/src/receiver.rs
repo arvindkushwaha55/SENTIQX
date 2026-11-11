@@ -71,11 +71,28 @@ fn json_response(status: u16, body: &str) -> Response<std::io::Cursor<Vec<u8>>> 
     r
 }
 
+/// Extra routes used by the editor extension. They need the same secret token.
+pub trait EditorRoutes: Send + Sync {
+    fn context(&self, body: &[u8]) -> bool;
+    fn result(&self, body: &[u8]) -> bool;
+    /// A fix the user approved, as JSON, handed over once.
+    fn pending(&self) -> Option<String>;
+}
+
 /// Starts the receiver on `port`. `on_event` is called for every accepted event.
 pub fn start(
     port: u16,
     token: String,
     on_event: impl Fn(ActivityEvent) + Send + Sync + 'static,
+) -> Result<Receiver, String> {
+    start_with_routes(port, token, on_event, None)
+}
+
+pub fn start_with_routes(
+    port: u16,
+    token: String,
+    on_event: impl Fn(ActivityEvent) + Send + Sync + 'static,
+    routes: Option<Arc<dyn EditorRoutes>>,
 ) -> Result<Receiver, String> {
     let server = Server::http(("127.0.0.1", port))
         .map_err(|e| format!("could not listen on 127.0.0.1:{port} ({e})"))?;
@@ -91,7 +108,7 @@ pub fn start(
         .spawn(move || {
             for request in server.incoming_requests() {
                 // One bad request must never take the receiver down.
-                let _ = catch_unwind(AssertUnwindSafe(|| handle(request, &worker, &on_event)));
+                let _ = catch_unwind(AssertUnwindSafe(|| handle(request, &worker, &on_event, routes.as_deref())));
             }
         })
         .map_err(|e| format!("could not start the receiver thread ({e})"))?;
@@ -99,8 +116,18 @@ pub fn start(
     Ok(Receiver { port, shared })
 }
 
-fn handle(mut request: tiny_http::Request, shared: &Shared, on_event: &impl Fn(ActivityEvent)) {
-    if request.method() != &Method::Post || request.url() != "/event" {
+fn handle(
+    mut request: tiny_http::Request,
+    shared: &Shared,
+    on_event: &impl Fn(ActivityEvent),
+    routes: Option<&dyn EditorRoutes>,
+) {
+    let url = request.url().to_string();
+    let is_post = request.method() == &Method::Post;
+    let is_get = request.method() == &Method::Get;
+    let known = (is_post && url == "/event")
+        || (routes.is_some() && ((is_post && (url == "/editor/context" || url == "/editor/result")) || (is_get && url == "/editor/pending")));
+    if !known {
         let _ = request.respond(json_response(404, "{}"));
         return;
     }
@@ -112,6 +139,16 @@ fn handle(mut request: tiny_http::Request, shared: &Shared, on_event: &impl Fn(A
         .is_some_and(|h| tokens_match(h.value.as_str(), &shared.token));
     if !authorised {
         let _ = request.respond(json_response(401, "{}"));
+        return;
+    }
+
+    if is_get {
+        // Only /editor/pending gets here.
+        let pending = routes.and_then(|r| r.pending());
+        let _ = match pending {
+            Some(json) => request.respond(json_response(200, &json)),
+            None => request.respond(json_response(204, "")),
+        };
         return;
     }
 
@@ -127,6 +164,12 @@ fn handle(mut request: tiny_http::Request, shared: &Shared, on_event: &impl Fn(A
         .is_ok();
     if !read_ok || body.len() as u64 > MAX_BODY_BYTES {
         let _ = request.respond(json_response(413, "{}"));
+        return;
+    }
+
+    if let Some(r) = routes.filter(|_| url != "/event") {
+        let accepted = if url == "/editor/context" { r.context(&body) } else { r.result(&body) };
+        let _ = request.respond(json_response(if accepted { 200 } else { 400 }, "{}"));
         return;
     }
 
@@ -244,6 +287,52 @@ mod tests {
         // No cwd at all is fine too.
         post(47938, "/event", Some("secret"), r#"{"hook_event_name":"Stop"}"#);
         assert_eq!(rx.recv_timeout(Duration::from_secs(2)).unwrap().kind, "turn_stop");
+    }
+
+    struct FakeRoutes(Mutex<Vec<String>>);
+    impl EditorRoutes for FakeRoutes {
+        fn context(&self, body: &[u8]) -> bool {
+            self.0.lock().unwrap().push(String::from_utf8_lossy(body).to_string());
+            body != b"bad"
+        }
+        fn result(&self, _: &[u8]) -> bool {
+            true
+        }
+        fn pending(&self) -> Option<String> {
+            self.0.lock().unwrap().pop()
+        }
+    }
+
+    fn get(port: u16, path: &str, token: Option<&str>) -> String {
+        let mut s = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        s.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
+        let auth = token.map(|t| format!("X-Sentiqx-Token: {t}\r\n")).unwrap_or_default();
+        s.write_all(format!("GET {path} HTTP/1.1\r\nHost: x\r\n{auth}Connection: close\r\n\r\n").as_bytes()).unwrap();
+        let mut out = String::new();
+        let _ = s.read_to_string(&mut out);
+        out
+    }
+
+    #[test]
+    fn editor_routes_need_the_token_and_do_not_depend_on_monitoring() {
+        let routes = Arc::new(FakeRoutes(Mutex::new(Vec::new())));
+        let _r = start_with_routes(47940, "secret".into(), |_| {}, Some(routes.clone())).unwrap();
+        assert!(post(47940, "/editor/context", None, "x").starts_with("HTTP/1.1 401"));
+        assert!(get(47940, "/editor/pending", Some("nope")).starts_with("HTTP/1.1 401"));
+        assert!(routes.0.lock().unwrap().is_empty());
+        assert!(post(47940, "/editor/context", Some("secret"), "ok").starts_with("HTTP/1.1 200"));
+        assert!(post(47940, "/editor/context", Some("secret"), "bad").starts_with("HTTP/1.1 400"));
+        routes.0.lock().unwrap().clear();
+        assert!(get(47940, "/editor/pending", Some("secret")).starts_with("HTTP/1.1 204"));
+        routes.0.lock().unwrap().push("{\"id\":\"1\"}".into());
+        assert!(get(47940, "/editor/pending", Some("secret")).contains("{\"id\":\"1\"}"));
+    }
+
+    #[test]
+    fn editor_routes_do_not_exist_without_a_bridge() {
+        let (_r, _rx) = setup(47941);
+        assert!(post(47941, "/editor/context", Some("secret"), "x").starts_with("HTTP/1.1 404"));
+        assert!(get(47941, "/editor/pending", Some("secret")).starts_with("HTTP/1.1 404"));
     }
 
     #[test]
