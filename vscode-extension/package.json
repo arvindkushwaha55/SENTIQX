@@ -1,0 +1,36 @@
+{
+  "name": "sentiqx-vscode",
+  "displayName": "SENTIQX",
+  "description": "Send selected code to the SENTIQX desktop app on this computer for debugging help.",
+  "version": "0.1.0",
+  "publisher": "sentiqx",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Other"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "extensionKind": ["ui", "workspace"],
+  "contributes": {
+    "commands": [
+      { "command": "sentiqx.analyseSelection", "title": "SENTIQX: Analyse Selection" },
+      { "command": "sentiqx.toggleAuto", "title": "SENTIQX: Turn Automatic Suggestions On or Off" },
+      { "command": "sentiqx.resetPermission", "title": "SENTIQX: Reset Permission" }
+    ],
+    "menus": {
+      "editor/context": [
+        { "command": "sentiqx.analyseSelection", "when": "editorHasSelection", "group": "navigation" }
+      ]
+    },
+    "configuration": {
+      "title": "SENTIQX",
+      "properties": {
+        "sentiqx.autoSuggestions": {
+          "type": "boolean",
+          "default": false,
+          "description": "After you save a file with errors, send the lines around the first new error to the SENTIQX app on this computer. Off by default."
+        }
+      }
+    }
+  }
+}
