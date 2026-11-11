@@ -1,4 +1,6 @@
 pub mod active_window;
+pub mod debug_ai;
+pub mod editor;
 pub mod history;
 pub mod lifecycle;
 pub mod normalize;
@@ -189,6 +191,29 @@ fn history_clear(state: tauri::State<HistoryState>) -> Result<(), String> {
     state.get()?.clear()
 }
 
+// ---- smart debug: editor bridge and optional AI review ----
+
+#[tauri::command]
+fn editor_latest(bridge: tauri::State<Arc<editor::EditorBridge>>) -> Option<editor::EditorContext> {
+    bridge.latest()
+}
+
+#[tauri::command]
+fn editor_clear(bridge: tauri::State<Arc<editor::EditorBridge>>) {
+    bridge.clear();
+}
+
+#[tauri::command]
+fn editor_apply(request: editor::ApplyRequest, bridge: tauri::State<Arc<editor::EditorBridge>>) -> Result<(), String> {
+    bridge.request_apply(request)
+}
+
+/// Runs on a background thread (`async`) so the window stays responsive while Claude answers.
+#[tauri::command(async)]
+fn debug_ai_review(code: String, language: String, start_line: u32, output: String) -> Result<serde_json::Value, String> {
+    debug_ai::analyse(&code, &language, start_line, &output)
+}
+
 fn note(app: &tauri::AppHandle, event: &str) {
     if let Ok(dir) = app.path().app_data_dir() {
         lifecycle::log(&dir, receiver::now_ms(), event);
@@ -262,14 +287,30 @@ pub fn run() {
             let store = history::History::open(&data_dir.join("history.db")).ok().map(Arc::new);
             app.manage(HistoryState(store.clone()));
 
+            // Editor bridge. The extension reads this token file; it is rewritten on every start
+            // and sits in the user's own profile folder.
+            let (ctx_emit, res_emit) = (app.handle().clone(), app.handle().clone());
+            let bridge = Arc::new(editor::EditorBridge::new(
+                Box::new(move |c| {
+                    let _ = ctx_emit.emit("editor-context", c);
+                }),
+                Box::new(move |r| {
+                    let _ = res_emit.emit("editor-apply-result", r);
+                }),
+            ));
+            app.manage(bridge.clone());
+            let _ = fs::create_dir_all(&data_dir);
+            let _ = fs::write(data_dir.join("editor-token"), &token);
+
             // Claude Code connector.
             let handle = app.handle().clone();
-            let (receiver, listen_error) = match receiver::start(PORT, token.clone(), move |event| {
+            let routes: Arc<dyn receiver::EditorRoutes> = bridge;
+            let (receiver, listen_error) = match receiver::start_with_routes(PORT, token.clone(), move |event| {
                 if let Some(h) = &store {
                     let _ = h.record(&event);
                 }
                 let _ = handle.emit("activity", event);
-            }) {
+            }, Some(routes)) {
                 Ok(r) => (Some(r), None),
                 Err(e) => (None, Some(e)),
             };
@@ -312,6 +353,10 @@ pub fn run() {
             history_delete,
             history_clear,
             note_close,
+            editor_latest,
+            editor_clear,
+            editor_apply,
+            debug_ai_review,
             window::window_pinned,
             window::set_window_pinned
         ])
