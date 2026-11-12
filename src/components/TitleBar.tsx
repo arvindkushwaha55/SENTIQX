@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Dict } from "../lib/i18n";
-import type { Language } from "../lib/types";
+import type { Language, Theme } from "../lib/types";
 import { closeWindow, hideWindow } from "../lib/windowControls";
 import type { View } from "./NavBar";
 import { CheckIcon, ChevronIcon, CloseIcon, LogoMark, MinusIcon, PinIcon } from "./icons";
@@ -19,6 +19,8 @@ export function TitleBar({
   pinFailed,
   lang,
   onLang,
+  theme,
+  onTheme,
   onNavigate,
   onInfo,
 }: {
@@ -28,12 +30,14 @@ export function TitleBar({
   pinFailed: boolean;
   lang: Language;
   onLang: (l: Language) => void;
+  theme: Theme;
+  onTheme: (t: Theme) => void;
   onNavigate: (v: View) => void;
   onInfo: (k: InfoKind) => void;
 }) {
   const [open, setOpen] = useState(false);
   const item =
-    "flex w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-[12.5px] text-[var(--text)] transition-colors hover:bg-[rgba(148,170,210,0.1)]";
+    "flex w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-[12.5px] text-[var(--text)] transition-colors hover:bg-[var(--tint-cyan)]";
 
   return (
     <header
@@ -70,6 +74,16 @@ export function TitleBar({
               <button type="button" className={item} role="menuitem" onClick={() => onLang("hinglish")}>
                 <span>Hinglish</span>
                 {lang === "hinglish" && <CheckIcon size={14} className="text-[var(--cyan)]" />}
+              </button>
+              <div className="mx-3.5 my-1.5 border-t border-[var(--line)]" />
+              <p className="label px-3.5 pb-1 pt-1">{d.menu.theme}</p>
+              <button type="button" className={item} role="menuitem" onClick={() => onTheme("dark")}>
+                <span>{d.menu.dark}</span>
+                {theme === "dark" && <CheckIcon size={14} className="text-[var(--cyan)]" />}
+              </button>
+              <button type="button" className={item} role="menuitem" onClick={() => onTheme("bright")}>
+                <span>{d.menu.bright}</span>
+                {theme === "bright" && <CheckIcon size={14} className="text-[var(--cyan)]" />}
               </button>
               <div className="mx-3.5 my-1.5 border-t border-[var(--line)]" />
               <button
