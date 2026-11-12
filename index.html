@@ -4,6 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SENTIQX</title>
+    <style>
+      html {
+        background: #05070d;
+      }
+      html[data-theme="bright"] {
+        background: #f4f7fb;
+      }
+    </style>
+    <script>
+      // Apply the saved theme before first paint so there is no flash of the wrong theme.
+      try {
+        if (localStorage.getItem("sentiqx.theme") === "bright") {
+          document.documentElement.dataset.theme = "bright";
+        }
+      } catch (e) {}
+    </script>
   </head>
 
   <body>
