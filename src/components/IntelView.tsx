@@ -131,7 +131,7 @@ export function IntelView({ d }: { d: Dict }) {
   return (
     <div className="space-y-3">
       <div className="px-1">
-        <h2 className="text-[17px] font-semibold tracking-tight">{t.title}</h2>
+        <h2 className="display text-[18px] font-semibold tracking-tight">{t.title}</h2>
         <p className="mt-0.5 text-xs leading-relaxed text-[var(--muted)]">{t.subtitle}</p>
       </div>
 
@@ -148,7 +148,7 @@ export function IntelView({ d }: { d: Dict }) {
               placeholder={t.placeholder}
               spellCheck={false}
               rows={9}
-              className="mt-2 w-full resize-y rounded-xl border border-[var(--line-strong)] bg-[var(--bg0)] p-3 font-mono text-[12px] leading-relaxed text-[var(--text)] placeholder:text-[var(--faint)]"
+              className="field mt-2 w-full resize-y p-3 font-mono text-[12px] leading-relaxed"
             />
             <div className="mt-1.5 flex items-center justify-between text-[11px] text-[var(--muted)]">
               <span className="font-mono">{t.chars(text.length, MAX_CHARS)}</span>
@@ -185,7 +185,7 @@ export function IntelView({ d }: { d: Dict }) {
         <Card>
           <Label>{t.reviewTitle}</Label>
           <p className="mt-1 text-xs text-[var(--muted)]">{t.reviewNote}</p>
-          <pre className="selectable mt-2.5 max-h-52 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-[var(--line-strong)] bg-[var(--bg0)] p-3 font-mono text-[11.5px] leading-relaxed">
+          <pre className="codeblock selectable mt-2.5 max-h-52 overflow-auto whitespace-pre-wrap break-words p-3 text-[11.5px]">
             {prepared.redacted.split(HIDDEN).flatMap((part, i, arr) =>
               i < arr.length - 1
                 ? [part, <mark key={i} className="rounded bg-[rgba(255,200,87,0.2)] px-1 text-[var(--s-waiting)]">{HIDDEN}</mark>]
@@ -205,7 +205,7 @@ export function IntelView({ d }: { d: Dict }) {
                 id="intel-me"
                 value={me}
                 onChange={(e) => setMe(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[var(--line-strong)] bg-[var(--bg0)] px-3 py-2 text-[13px] text-[var(--text)]"
+                className="field mt-1.5 w-full px-3 py-2 text-[13px]"
               >
                 <option value="">{t.notSelected}</option>
                 {prepared.people.map((p) => (
