@@ -21,6 +21,12 @@ function Svg({ size = 16, className, children }: P & { children: ReactNode }) {
   );
 }
 
+export const ChevronIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M6 9l6 6 6-6" />
+  </Svg>
+);
+
 export const PinIcon = (p: P & { filled?: boolean }) => (
   <Svg {...p}>
     <path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z" fill={p.filled ? "currentColor" : "none"} />
