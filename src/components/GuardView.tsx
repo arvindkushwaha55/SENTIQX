@@ -125,7 +125,7 @@ export function GuardView({ d, app }: { d: Dict; app: ActiveApp | null }) {
   return (
     <div className="space-y-3">
       <div className="px-1">
-        <h2 className="text-[17px] font-semibold tracking-tight">{t.title}</h2>
+        <h2 className="display text-[18px] font-semibold tracking-tight">{t.title}</h2>
         <p className="mt-0.5 text-xs leading-relaxed text-[var(--muted)]">{t.subtitle}</p>
       </div>
 
@@ -143,7 +143,7 @@ export function GuardView({ d, app }: { d: Dict; app: ActiveApp | null }) {
           placeholder={t.placeholder}
           spellCheck={false}
           rows={7}
-          className="mt-2 w-full resize-y rounded-xl border border-[var(--line-strong)] bg-[var(--bg0)] p-3 font-mono text-[12px] leading-relaxed text-[var(--text)] placeholder:text-[var(--faint)]"
+          className="field mt-2 w-full resize-y p-3 font-mono text-[12px] leading-relaxed"
         />
         {clipFailed && <p className="mt-1.5 text-[11px] text-[var(--s-waiting)]">{t.clipboardFailed}</p>}
         <div className="mt-3 flex gap-2">
@@ -168,7 +168,7 @@ export function GuardView({ d, app }: { d: Dict; app: ActiveApp | null }) {
             <select
               value={manualDest}
               onChange={(e) => setManualDest(e.target.value as Category)}
-              className="w-full rounded-xl border border-[var(--line-strong)] bg-[var(--bg0)] px-3 py-2 text-[13px] text-[var(--text)]"
+              className="field w-full px-3 py-2 text-[13px]"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
