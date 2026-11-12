@@ -22,7 +22,7 @@ import {
   stopMonitoring,
 } from "./lib/connector";
 import { deriveStatus, initialState, reducer } from "./lib/engine";
-import { loadProjectFilter, saveProjectFilter, useLanguage, useNotificationsEnabled, useNow } from "./lib/hooks";
+import { loadProjectFilter, saveProjectFilter, useLanguage, useNotificationsEnabled, useNow, useTheme } from "./lib/hooks";
 import { dictionaries } from "./lib/i18n";
 import { notificationFor, notify } from "./lib/notify";
 import type { Status } from "./lib/types";
@@ -32,6 +32,10 @@ const NO_EVENTS_HINT_AFTER_MS = 20_000;
 
 function App() {
   const [lang, setLang] = useLanguage();
+  const [theme, setTheme] = useTheme();
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
   const { pinned, toggle: togglePin, failed: pinFailed } = usePinned();
   const awareness = useAwareness();
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -167,6 +171,8 @@ function App() {
         pinFailed={pinFailed}
         lang={lang}
         onLang={setLang}
+        theme={theme}
+        onTheme={setTheme}
         onNavigate={navigate}
         onInfo={setInfo}
       />
