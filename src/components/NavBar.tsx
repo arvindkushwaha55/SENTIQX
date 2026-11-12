@@ -13,6 +13,7 @@ const ITEMS: { id: View; Icon: typeof PulseIcon }[] = [
   { id: "settings", Icon: GearIcon },
 ];
 
+/** Floating circular dock, centred at the bottom of the window. */
 export function NavBar({
   d,
   view,
@@ -26,32 +27,41 @@ export function NavBar({
   dot?: View | null;
 }) {
   return (
-    <nav className="grid shrink-0 grid-cols-7 gap-0.5 border-t border-[var(--line)] bg-[rgba(5,7,11,0.6)] px-1 py-1.5" aria-label="Main">
-      {ITEMS.map(({ id, Icon }) => {
-        const active = view === id;
-        return (
-          <button
-            key={id}
-            type="button"
-            onClick={() => onChange(id)}
-            aria-current={active ? "page" : undefined}
-            className={`relative flex min-w-0 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-medium transition-colors ${
-              active ? "text-[var(--cyan)]" : "text-[var(--muted)] hover:text-[var(--text)]"
-            }`}
-          >
-            {active && (
-              <span className="absolute -top-1.5 h-[2px] w-7 rounded-full bg-[var(--cyan)] shadow-[0_0_10px_var(--cyan)]" />
-            )}
-            <span className="relative">
-              <Icon size={17} />
-              {dot === id && !active && (
-                <span className="absolute -right-1 -top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--s-waiting)]" aria-hidden="true" />
-              )}
-            </span>
-            <span className="max-w-full truncate">{d.nav[id]}</span>
-          </button>
-        );
-      })}
+    <nav className="flex shrink-0 justify-center pb-2.5 pt-1.5" aria-label="Main">
+      <div className="flex items-start gap-1 sm:gap-1.5">
+        {ITEMS.map(({ id, Icon }) => {
+          const active = view === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onChange(id)}
+              aria-current={active ? "page" : undefined}
+              className="group flex w-[50px] flex-col items-center gap-1"
+            >
+              <span
+                className={`relative grid h-10 w-10 place-items-center rounded-full border shadow-[0_6px_16px_rgba(0,0,0,0.35)] transition-colors ${
+                  active
+                    ? "border-[var(--cyan)] bg-[rgba(94,231,255,0.12)] text-[var(--cyan)]"
+                    : "border-[var(--line)] bg-[rgba(16,22,35,0.88)] text-[var(--muted)] group-hover:text-[var(--text)]"
+                }`}
+              >
+                <Icon size={17} />
+                {dot === id && !active && (
+                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--s-waiting)]" aria-hidden="true" />
+                )}
+              </span>
+              <span
+                className={`max-w-full truncate text-[9px] ${
+                  active ? "font-semibold text-[var(--text)]" : "text-[var(--faint)]"
+                }`}
+              >
+                {d.nav[id]}
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 }
