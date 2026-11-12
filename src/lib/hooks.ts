@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Language } from "./types";
+import type { Language, Theme } from "./types";
 
 function read(key: string): string | null {
   try {
@@ -47,4 +47,14 @@ export function useLanguage(): [Language, (l: Language) => void] {
     write("sentiqx.lang", l);
   }, []);
   return [lang, set];
+}
+
+/** Colour theme: "dark" (Cosmic Obsidian) or "bright" (Arctic Titanium). Persisted like the language. */
+export function useTheme(): [Theme, (t: Theme) => void] {
+  const [theme, setTheme] = useState<Theme>(() => (read("sentiqx.theme") === "bright" ? "bright" : "dark"));
+  const set = useCallback((t: Theme) => {
+    setTheme(t);
+    write("sentiqx.theme", t);
+  }, []);
+  return [theme, set];
 }
