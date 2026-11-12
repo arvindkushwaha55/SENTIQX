@@ -40,10 +40,10 @@ export function NavBar({
               className="group flex w-[50px] flex-col items-center gap-1"
             >
               <span
-                className={`relative grid h-10 w-10 place-items-center rounded-full border shadow-[0_6px_16px_rgba(0,0,0,0.35)] transition-colors ${
+                className={`relative grid h-10 w-10 place-items-center rounded-full border shadow-[0_6px_16px_var(--shadow)] transition-colors ${
                   active
-                    ? "border-[var(--cyan)] bg-[rgba(94,231,255,0.12)] text-[var(--cyan)]"
-                    : "border-[var(--line)] bg-[rgba(16,22,35,0.88)] text-[var(--muted)] group-hover:text-[var(--text)]"
+                    ? "border-[var(--orange)] bg-[var(--tint-orange)] text-[var(--orange)]"
+                    : "border-[var(--line)] bg-[var(--dock-bg)] text-[var(--muted)] group-hover:text-[var(--text)]"
                 }`}
               >
                 <Icon size={17} />
