@@ -21,7 +21,7 @@ import {
   startMonitoring,
   stopMonitoring,
 } from "./lib/connector";
-import { deriveStatus, initialState, reducer } from "./lib/engine";
+import { deriveStatus, displayedSession, engineReducer, initialEngineState } from "./lib/engine";
 import { loadProjectFilter, saveProjectFilter, useLanguage, useNotificationsEnabled, useNow, useTheme } from "./lib/hooks";
 import { dictionaries } from "./lib/i18n";
 import { notificationFor, notify } from "./lib/notify";
@@ -38,7 +38,9 @@ function App() {
   }, [theme]);
   const { pinned, toggle: togglePin, failed: pinFailed } = usePinned();
   const awareness = useAwareness();
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(engineReducer, initialEngineState);
+  // The UI shows one session at a time: the most recently active one.
+  const session = useMemo(() => displayedSession(state), [state]);
   const [view, setView] = useState<View>("home");
   const [info, setInfo] = useState<InfoKind | null>(null);
   const [askConsent, setAskConsent] = useState(false);
@@ -57,12 +59,23 @@ function App() {
     document.documentElement.lang = lang === "en" ? "en" : "hi-Latn";
   }, [lang]);
 
-  const status = useMemo(() => deriveStatus(state, now), [state, now]);
+  // Escape dismisses the topmost overlay (info sheet first, then the consent sheet).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (info) setInfo(null);
+      else if (askConsent) setAskConsent(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [info, askConsent]);
+
+  const status = useMemo(() => deriveStatus(session, now), [session, now]);
   const canStart = Boolean(connector?.listening) || demo;
   const showNoEventsHint =
     !demo &&
-    state.monitor === "on" &&
-    state.lastEventAt === null &&
+    session.monitor === "on" &&
+    session.lastEventAt === null &&
     startedAt !== null &&
     now - startedAt > NO_EVENTS_HINT_AFTER_MS;
 
@@ -75,10 +88,10 @@ function App() {
   // Meaningful status changes only. Demo data never notifies.
   const prevStatus = useRef<Status | null>(null);
   useEffect(() => {
-    const n = notificationFor(prevStatus.current, status, state, d);
+    const n = notificationFor(prevStatus.current, status, session, d);
     prevStatus.current = status;
     if (n && notifications && !demo) void notify(n.title, n.body);
-  }, [status, state, d, notifications, demo]);
+  }, [status, session, d, notifications, demo]);
 
   // Real activity from the Rust receiver. The engine itself ignores events unless monitoring is on.
   useEffect(() => onActivity((event) => dispatch({ type: "event", event })), []);
@@ -188,7 +201,7 @@ function App() {
         <div hidden={view !== "home"}>
           <HomeView
             d={d}
-            s={state}
+            s={session}
             status={status}
             now={now}
             prefs={awareness.prefs}
@@ -203,7 +216,7 @@ function App() {
         <div hidden={view !== "live"}>
           <LiveView
             d={d}
-            s={state}
+            s={session}
             status={status}
             now={now}
             hint={showNoEventsHint ? d.noEventsHint : null}
@@ -226,7 +239,7 @@ function App() {
           <GuardView d={d} app={awareness.app} />
         </div>
         <div hidden={view !== "history"}>
-          <HistoryView d={d} active={view === "history"} version={state.feed.length} />
+          <HistoryView d={d} active={view === "history"} version={session.feed.length} />
         </div>
         <div hidden={view !== "settings"}>
           <SettingsView

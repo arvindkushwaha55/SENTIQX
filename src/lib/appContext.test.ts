@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { type ActiveApp, appContext, contextLine, greeting, headline } from "./appContext";
 import { pushRecent } from "./awareness";
-import { initialState, reducer } from "./engine";
+import { displayedSession, engineReducer, initialEngineState, initialState } from "./engine";
 import { dictionaries } from "./i18n";
 
 const app = (name: string, category: ActiveApp["category"]): ActiveApp => ({ exe: name, name, category, title: null, pid: 1 });
 const en = dictionaries.en;
 const hi = dictionaries.hinglish;
 
-const monitoring = reducer(initialState, { type: "monitor", action: "start", at: 0 });
-const withEvents = reducer(monitoring, { type: "event", event: { kind: "prompt", at: 1, sessionId: "s" } });
+const monitoring = engineReducer(initialEngineState, { type: "monitor", action: "start", at: 0 });
+const withEvents = displayedSession(
+  engineReducer(monitoring, { type: "event", event: { kind: "prompt", at: 1, sessionId: "s" } }),
+);
 
 describe("appContext", () => {
   it("detection alone never means understanding", () => {
@@ -20,7 +22,7 @@ describe("appContext", () => {
 
   it("a connected source is not understanding until events have arrived", () => {
     const vs = app("VS Code", "coding");
-    expect(appContext(vs, monitoring)).toMatchObject({ contextAvailable: true, understood: false });
+    expect(appContext(vs, displayedSession(monitoring))).toMatchObject({ contextAvailable: true, understood: false });
     expect(appContext(vs, withEvents)).toMatchObject({ contextAvailable: true, understood: true });
   });
 

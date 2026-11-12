@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Dict } from "../lib/i18n";
 import type { Language, Theme } from "../lib/types";
 import { closeWindow, hideWindow } from "../lib/windowControls";
@@ -36,6 +36,14 @@ export function TitleBar({
   onInfo: (k: InfoKind) => void;
 }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open ]);
   const item =
     "flex w-full items-center justify-between gap-3 px-3.5 py-2 text-left text-[12.5px] text-[var(--text)] transition-colors hover:bg-[var(--tint-cyan)]";
 

@@ -71,4 +71,19 @@ export interface SessionState {
   activeError: ErrorRecord | null;
   lastToolStartAt: number | null;
   nextErrorId: number;
+  /** True once this session's own session_end was seen. A delayed event from an
+   * ended session must not reactivate it; only a fresh start/prompt revives it. */
+  ended: boolean;
+}
+
+/**
+ * Whole-engine state: one isolated SessionState bucket per Claude session,
+ * keyed by session id (plus one anonymous bucket for events without an id).
+ * Events from one session can never modify another session's bucket.
+ */
+export interface EngineState {
+  monitor: MonitorState;
+  sessions: Record<string, SessionState>;
+  /** Bucket key of the most recently active session — the one the UI shows. */
+  displayedId: string | null;
 }
