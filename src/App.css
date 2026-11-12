@@ -5,26 +5,71 @@
   --font-mono: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
 }
 
+/* DARK THEME — Cosmic Obsidian × Plasma Orange (default) */
 :root {
-  --bg0: #05070b;
-  --bg1: #0a0e15;
-  --bg2: #101623;
-  --line: rgba(148, 170, 210, 0.12);
-  --line-strong: rgba(148, 170, 210, 0.24);
-  --text: #e8eefc;
+  --bg0: #05070d;
+  --bg1: #0b1020;
+  --bg2: #131b2d;
+  --card: #131b2d;
+  --text: #edf5ff;
   --muted: #8a97b2;
   --faint: #6f7c99;
+  --line: color-mix(in srgb, var(--text) 10%, transparent);
+  --line-strong: color-mix(in srgb, var(--text) 22%, transparent);
 
-  --cyan: #5ee7ff;
+  /* Cyan = AI intelligence, system activity, interactive elements. */
+  --cyan: #00d9ff;
+  /* Orange = primary actions, active states, highlights, important indicators. */
+  --orange: #ff7626;
+  --amber: #ffaa36;
+  --violet: #9165ff;
   --blue: #4d7cff;
-  --violet: #9b7bff;
 
-  --s-working: #5ee7ff;
-  --s-waiting: #ffc857;
-  --s-stuck: #ff9a5c;
+  --s-working: #00d9ff;
+  --s-waiting: #ffaa36;
+  --s-stuck: #ff7626;
   --s-error: #ff6b81;
   --s-done: #5af0a5;
   --s-idle: #5b6780;
+
+  --tint-cyan: rgba(0, 217, 255, 0.1);
+  --tint-orange: rgba(255, 118, 38, 0.14);
+  --glass: rgba(11, 16, 32, 0.72);
+  --dock-bg: rgba(11, 16, 32, 0.88);
+  --overlay: rgba(2, 4, 10, 0.66);
+  --shadow: rgba(0, 0, 0, 0.5);
+  --on-accent: #221100;
+}
+
+/* BRIGHT THEME — Arctic Titanium × Plasma Orange */
+[data-theme="bright"] {
+  --bg0: #f4f7fb;
+  --bg1: #ffffff;
+  --bg2: #eaf0f6;
+  --card: #eaf0f6;
+  --text: #172333;
+  --muted: #77869a;
+  --faint: #9aa8ba;
+
+  --cyan: #009fc2;
+  --orange: #f07825;
+  --amber: #d99124;
+  --violet: #8067d9;
+  --blue: #3d6bd8;
+
+  --s-working: #009fc2;
+  --s-waiting: #d99124;
+  --s-stuck: #f07825;
+  --s-error: #e5484d;
+  --s-done: #1f9d66;
+  --s-idle: #77869a;
+
+  --tint-cyan: rgba(0, 159, 194, 0.1);
+  --tint-orange: rgba(240, 120, 37, 0.14);
+  --glass: rgba(255, 255, 255, 0.75);
+  --dock-bg: rgba(255, 255, 255, 0.92);
+  --overlay: rgba(23, 35, 51, 0.42);
+  --shadow: rgba(23, 35, 51, 0.16);
 }
 
 [data-status="working"] { --c: var(--s-working); }
@@ -80,14 +125,14 @@ button:disabled {
 /* App frame: deep surface with two soft colour washes, no heavy effects. */
 .frame {
   background:
-    radial-gradient(120% 70% at 85% -10%, rgba(77, 124, 255, 0.16), transparent 60%),
-    radial-gradient(90% 60% at -15% 105%, rgba(155, 123, 255, 0.12), transparent 60%),
+    radial-gradient(120% 70% at 85% -10%, color-mix(in srgb, var(--cyan) 13%, transparent), transparent 60%),
+    radial-gradient(90% 60% at -15% 105%, color-mix(in srgb, var(--violet) 11%, transparent), transparent 60%),
     var(--bg0);
   border: 1px solid var(--line-strong);
 }
 
 .surface {
-  background: linear-gradient(180deg, rgba(20, 28, 44, 0.78), rgba(12, 17, 28, 0.78));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card) 92%, transparent), color-mix(in srgb, var(--bg1) 94%, transparent));
   border: 1px solid var(--line);
   border-radius: 16px;
 }
@@ -99,7 +144,7 @@ button:disabled {
   border: 1px solid var(--line-strong);
   background:
     radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--c) 14%, transparent), transparent 60%),
-    linear-gradient(180deg, rgba(24, 33, 52, 0.85), rgba(11, 16, 27, 0.9));
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 88%, transparent), color-mix(in srgb, var(--bg0) 92%, transparent));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 10px 30px -18px color-mix(in srgb, var(--c) 55%, transparent);
@@ -126,7 +171,7 @@ button:disabled {
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--muted);
-  background: rgba(8, 12, 20, 0.5);
+  background: color-mix(in srgb, var(--bg0) 55%, transparent);
 }
 
 .winbtn {
@@ -141,16 +186,47 @@ button:disabled {
   transition: background 0.15s, color 0.15s;
 }
 .winbtn:hover {
-  background: rgba(148, 170, 210, 0.12);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
   color: var(--text);
 }
 .winbtn.danger:hover {
-  background: rgba(255, 107, 129, 0.18);
+  background: color-mix(in srgb, var(--s-error) 16%, transparent);
   color: var(--s-error);
 }
 .winbtn.on {
-  color: var(--cyan);
-  background: rgba(94, 231, 255, 0.1);
+  color: var(--orange);
+  background: var(--tint-orange);
+}
+
+/* Brand pill in the title bar; opens the app menu (language, privacy, terms, about). */
+.brandpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg0) 50%, transparent);
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+.brandpill:hover {
+  border-color: var(--line-strong);
+  background: color-mix(in srgb, var(--card) 65%, transparent);
+}
+
+.menupanel {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  width: 224px;
+  padding-bottom: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, var(--bg1), color-mix(in srgb, var(--bg1) 94%, var(--bg0)));
+  box-shadow: 0 20px 40px var(--shadow);
+  overflow: hidden;
 }
 
 .dot {

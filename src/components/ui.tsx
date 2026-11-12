@@ -42,12 +42,12 @@ export function Button({
 }) {
   const styles: Record<Variant, string> = {
     primary:
-      "bg-gradient-to-r from-[var(--cyan)] to-[var(--blue)] text-[#04101a] font-semibold shadow-[0_8px_24px_-12px_var(--cyan)] hover:brightness-110",
+      "bg-gradient-to-r from-[var(--orange)] to-[var(--amber)] text-[var(--on-accent)] font-semibold shadow-[0_8px_24px_-12px_var(--orange)] hover:brightness-110",
     ghost:
-      "border border-[var(--line-strong)] bg-[rgba(16,22,35,0.7)] text-[var(--text)] hover:border-[var(--muted)]",
+      "border border-[var(--line-strong)] bg-[var(--glass)] text-[var(--text)] hover:border-[var(--muted)]",
     subtle: "border border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)] hover:border-[var(--line-strong)]",
     danger:
-      "border border-[var(--line-strong)] bg-[rgba(16,22,35,0.7)] text-[var(--s-error)] hover:border-[var(--s-error)]",
+      "border border-[var(--line-strong)] bg-[var(--glass)] text-[var(--s-error)] hover:border-[var(--s-error)]",
   };
   return (
     <button
@@ -73,7 +73,7 @@ export function Chip({ children, color, title }: { children: ReactNode; color?: 
 export function Empty({ icon, title, note }: { icon: ReactNode; title: string; note?: string }) {
   return (
     <div className="grid place-items-center px-4 py-8 text-center">
-      <div className="mb-3 grid h-12 w-12 place-items-center rounded-2xl border border-[var(--line-strong)] bg-[rgba(94,231,255,0.06)] text-[var(--cyan)]">
+      <div className="mb-3 grid h-12 w-12 place-items-center rounded-2xl border border-[var(--line-strong)] bg-[var(--tint-cyan)] text-[var(--cyan)]">
         {icon}
       </div>
       <p className="text-[13px]">{title}</p>

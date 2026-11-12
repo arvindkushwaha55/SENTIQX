@@ -8,6 +8,7 @@ import type { View } from "./NavBar";
 import { Orb } from "./Orb";
 import { ZoneCard } from "./ZoneCard";
 import { AppIcon, ChatIcon, CheckIcon, CloseIcon, CodeIcon, EyeIcon, GearIcon, GlobeIcon, PulseIcon, ShieldIcon, TerminalIcon } from "./icons";
+import { FeedCard } from "./LiveCards";
 import { Button, Card, Chip, Label } from "./ui";
 
 const CATEGORY: Record<Category, { Icon: typeof AppIcon; color: string }> = {
@@ -74,7 +75,8 @@ export function HomeView({ d, s, status, now, prefs, app, recent, awarenessFaile
   ];
 
   return (
-    <div className="space-y-3">
+    <div className="grid items-start gap-3 min-[620px]:grid-cols-[1.22fr_1fr]">
+      <div className="space-y-3">
       <p className="px-1 text-[17px] font-semibold tracking-tight">{greeting(new Date(now).getHours(), d)}</p>
 
       {awarenessFailed && (
@@ -132,17 +134,24 @@ export function HomeView({ d, s, status, now, prefs, app, recent, awarenessFaile
           </Card>
         ))}
 
-      {prefs?.enabled && <ZoneCard d={d} app={app} />}
-
-      <Card>
+      <section className="hero rise p-4" data-status={status ?? "idle"}>
         <div className="flex items-center gap-3">
           {s.monitor === "on" && <Orb status={status} size={46} />}
           <div className="min-w-0 flex-1">
-            <Label>{t.summaryTitle}</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Label>{t.summaryTitle}</Label>
+              {s.monitor === "on" && (
+                <span className="chip">
+                  <span className="dot" style={{ color: "var(--c)" }} />
+                  {status ? d.status[status] : d.statusNone}
+                  {s.project ? ` · ${s.project}` : ""}
+                </span>
+              )}
+            </div>
             {s.monitor === "off" ? (
-              <p className="mt-1 text-[13px] leading-snug text-[var(--muted)]">{t.claudeNotConnected}</p>
+              <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">{t.claudeNotConnected}</p>
             ) : (
-              <p className="mt-1 text-[13px] leading-snug">{summary.now}</p>
+              <p className="mt-1.5 text-[14.5px] leading-snug">{summary.now}</p>
             )}
           </div>
         </div>
@@ -152,7 +161,13 @@ export function HomeView({ d, s, status, now, prefs, app, recent, awarenessFaile
             <p>{summary.next}</p>
           </div>
         )}
-      </Card>
+      </section>
+      </div>
+
+      <div className="space-y-3">
+      {prefs?.enabled && <ZoneCard d={d} app={app} />}
+
+      {s.monitor === "on" && <FeedCard d={d} s={s} now={now} />}
 
       {prefs?.enabled && (
         <Card>
@@ -188,6 +203,7 @@ export function HomeView({ d, s, status, now, prefs, app, recent, awarenessFaile
             </button>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 export type Status = "working" | "waiting" | "stuck" | "error" | "done";
 export type MonitorState = "off" | "on" | "paused";
 export type Language = "en" | "hinglish";
+export type Theme = "dark" | "bright";
 export type ToolKind = "edit" | "run" | "read" | "web" | "agent" | "other";
 
 /**

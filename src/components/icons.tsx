@@ -21,6 +21,12 @@ function Svg({ size = 16, className, children }: P & { children: ReactNode }) {
   );
 }
 
+export const ChevronIcon = (p: P) => (
+  <Svg {...p}>
+    <path d="M6 9l6 6 6-6" />
+  </Svg>
+);
+
 export const PinIcon = (p: P & { filled?: boolean }) => (
   <Svg {...p}>
     <path d="M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z" fill={p.filled ? "currentColor" : "none"} />
@@ -173,8 +179,8 @@ export function LogoMark({ size = 22 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
       <defs>
         <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#5ee7ff" />
-          <stop offset="1" stopColor="#9b7bff" />
+          <stop offset="0" style={{ stopColor: "var(--cyan)" }} />
+          <stop offset="1" style={{ stopColor: "var(--violet)" }} />
         </linearGradient>
       </defs>
       <path d="M16 2.5l11.7 6.75v13.5L16 29.5 4.3 22.75V9.25L16 2.5z" fill="none" stroke="url(#lg)" strokeWidth="1.8" />

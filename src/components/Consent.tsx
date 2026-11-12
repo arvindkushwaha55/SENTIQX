@@ -13,12 +13,12 @@ export function Consent({
 }) {
   return (
     <div
-      className="absolute inset-0 z-10 flex items-end bg-[rgba(2,4,8,0.72)] p-3"
+      className="absolute inset-0 z-10 flex items-end bg-[var(--overlay)] p-3"
       role="dialog"
       aria-modal="true"
       aria-labelledby="consent-title"
     >
-      <div className="surface rise max-h-full w-full overflow-y-auto !border-[var(--line-strong)] !bg-[#0b111c] p-4">
+      <div className="surface rise max-h-full w-full overflow-y-auto !border-[var(--line-strong)] !bg-[var(--bg1)] p-4">
         <div className="flex items-center gap-2 text-[var(--cyan)]">
           <ShieldIcon size={18} />
           <h2 id="consent-title" className="text-[16px] font-semibold text-[var(--text)]">

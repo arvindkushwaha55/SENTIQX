@@ -85,6 +85,25 @@ export interface Dict {
     pinnedState: string;
     unpinnedState: string;
   };
+  menu: {
+    language: string;
+    theme: string;
+    dark: string;
+    bright: string;
+    privacy: string;
+    terms: string;
+    about: string;
+    settings: string;
+  };
+  info: {
+    close: string;
+    privacyTitle: string;
+    privacyBody: string[];
+    termsTitle: string;
+    termsBody: string[];
+    aboutTitle: string;
+    aboutBody: string[];
+  };
   time: {
     justNow: string;
     secondsAgo: (n: number) => string;
@@ -439,6 +458,39 @@ const en: Dict = {
     pinFailed: "Could not change the pin.",
     pinnedState: "Pinned on top",
     unpinnedState: "Not pinned",
+  },
+  menu: {
+    language: "Language",
+    theme: "Theme",
+    dark: "Dark · Cosmic Obsidian",
+    bright: "Bright · Arctic Titanium",
+    privacy: "Privacy Policy",
+    terms: "Terms of Use",
+    about: "About SENTIQX",
+    settings: "Settings",
+  },
+  info: {
+    close: "Close",
+    privacyTitle: "Privacy Policy",
+    privacyBody: [
+      "SENTIQX runs on your own computer. Your activity data is not sent to us or to any server we run — there is no SENTIQX cloud.",
+      "Claude Code monitoring reads only event names, tool names and counts. It never reads your prompts, your code, tool inputs or file contents.",
+      "Session history is stored only in a local database on this computer. You can delete any session, or everything, from the History tab.",
+      "App detection is off until you allow it, and window titles need their own separate permission. Nothing is detected while monitoring is paused or stopped.",
+      "One exception: Smart Debug's AI review sends code out only when you click for it — after secret-looking text is hidden — through your own Claude Code login.",
+    ],
+    termsTitle: "Terms of Use",
+    termsBody: [
+      "SENTIQX shows only what your tools report. Reports can be incomplete or wrong, so check important work yourself before acting on it.",
+      "SENTIQX never sends messages, changes files or makes decisions for you. What you do with what it shows is your responsibility.",
+      "SENTIQX is provided as-is, without any warranty. It is an early, work-in-progress tool.",
+    ],
+    aboutTitle: "About SENTIQX",
+    aboutBody: [
+      "Your AI works. SENTIQX understands.",
+      "SENTIQX is a local companion that watches authorised Claude Code activity and explains it in simple words — what is happening, what finished, and what might happen next.",
+      "Version 0.1.0 · Work in progress.",
+    ],
   },
   time: {
     justNow: "just now",
@@ -987,6 +1039,39 @@ const hinglish: Dict = {
     pinFailed: "Pin badal nahi paaya.",
     pinnedState: "Upar pinned",
     unpinnedState: "Pinned nahi",
+  },
+  menu: {
+    language: "Bhasha",
+    theme: "Theme",
+    dark: "Dark · Cosmic Obsidian",
+    bright: "Bright · Arctic Titanium",
+    privacy: "Privacy Policy",
+    terms: "Terms of Use",
+    about: "SENTIQX ke baare me",
+    settings: "Settings",
+  },
+  info: {
+    close: "Band karo",
+    privacyTitle: "Privacy Policy",
+    privacyBody: [
+      "SENTIQX aapke apne computer par chalta hai. Aapki activity ka data na humein bheja jata hai, na kisi server par — SENTIQX ka koi cloud hai hi nahi.",
+      "Claude Code ki monitoring sirf event ke naam, tool ke naam aur ginti padhti hai. Aapke prompts, aapka code, tool inputs ya file ka content kabhi nahi padha jata.",
+      "Session history sirf is computer ke local database me rehti hai. Koi bhi session, ya sab kuch, History tab se kabhi bhi mitaya ja sakta hai.",
+      "App detection tab tak band rehta hai jab tak aap ijazat na dein, aur window titles ke liye alag se ijazat lagti hai. Monitoring pause ya stop ho to kuch detect nahi hota.",
+      "Ek hi apvaad: Smart Debug ka AI review code tabhi bahar bhejta hai jab aap khud click karein — pehle secret jaisi cheezein chhupa kar — aur wo bhi aapke apne Claude Code login se.",
+    ],
+    termsTitle: "Terms of Use",
+    termsBody: [
+      "SENTIQX sirf wahi dikhata hai jo aapke tools report karte hain. Report adhuri ya galat ho sakti hai, isliye zaroori kaam par kadam lene se pehle khud jaanch lein.",
+      "SENTIQX kabhi aapki taraf se message nahi bhejta, file nahi badalta, faisle nahi leta. Jo dikhta hai usse aap kya karte hain, wo aapki zimmedari hai.",
+      "SENTIQX jaisa hai waisa hi diya jata hai, bina kisi warranty ke. Ye ek shuruati, banta-hua tool hai.",
+    ],
+    aboutTitle: "SENTIQX ke baare me",
+    aboutBody: [
+      "Your AI works. SENTIQX understands.",
+      "SENTIQX ek local saathi hai jo ijazat wali Claude Code activity ko dekhta hai aur asaan shabdon me samjhata hai — kya ho raha hai, kya ho gaya, aur aage kya ho sakta hai.",
+      "Version 0.1.0 · Abhi banta hua (work in progress).",
+    ],
   },
   time: {
     justNow: "abhi abhi",
