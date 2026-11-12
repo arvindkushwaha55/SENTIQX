@@ -41,7 +41,7 @@ export function SettingsView({
 
   return (
     <div className="space-y-3">
-      <h2 className="px-1 text-[17px] font-semibold tracking-tight">{t.title}</h2>
+      <h2 className="display px-1 text-[18px] font-semibold tracking-tight">{t.title}</h2>
 
       <Card>
         <Label>{t.language}</Label>
@@ -124,7 +124,7 @@ export function SettingsView({
             onChange={(e) => setDraft(e.target.value)}
             placeholder={t.filterPlaceholder}
             spellCheck={false}
-            className="min-w-0 flex-1 rounded-xl border border-[var(--line-strong)] bg-[var(--bg0)] px-3 py-2 font-mono text-[12px] text-[var(--text)] placeholder:text-[var(--faint)]"
+            className="field min-w-0 flex-1 px-3 py-2 font-mono text-[12px]"
           />
           <Button variant="ghost" onClick={() => onFilter(draft)} disabled={!draft.trim()}>
             {t.filterApply}
@@ -250,7 +250,7 @@ export function HistoryView({ d, active, version }: { d: Dict; active: boolean; 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-[17px] font-semibold tracking-tight">{t.title}</h2>
+        <h2 className="display text-[18px] font-semibold tracking-tight">{t.title}</h2>
         {rows && rows.length > 0 && !confirm && (
           <button type="button" className="text-[11px] text-[var(--muted)] hover:text-[var(--s-error)]" onClick={() => setConfirm(true)}>
             {t.deleteAll}
