@@ -8,8 +8,9 @@ import { GuardView } from "./components/GuardView";
 import { IntelView } from "./components/IntelView";
 import { LiveView } from "./components/LiveView";
 import { NavBar, type View } from "./components/NavBar";
+import { InfoSheet } from "./components/InfoSheet";
 import { HistoryView, SettingsView } from "./components/SecondaryViews";
-import { TitleBar } from "./components/TitleBar";
+import { TitleBar, type InfoKind } from "./components/TitleBar";
 import { useAwareness } from "./lib/awareness";
 import {
   type ConnectorStatus,
@@ -35,6 +36,7 @@ function App() {
   const awareness = useAwareness();
   const [state, dispatch] = useReducer(reducer, initialState);
   const [view, setView] = useState<View>("home");
+  const [info, setInfo] = useState<InfoKind | null>(null);
   const [askConsent, setAskConsent] = useState(false);
   const [demo, setDemo] = useState(false);
   const [connector, setConnector] = useState<ConnectorStatus | null>(null);
@@ -157,8 +159,17 @@ function App() {
     : `${d.connectorNotReady}${connector?.error ? ` (${connector.error})` : ""}`;
 
   return (
-    <div className="frame relative flex h-full flex-col overflow-hidden rounded-[12px]">
-      <TitleBar d={d} pinned={pinned} onTogglePin={togglePin} pinFailed={pinFailed} />
+    <div className="frame relative flex h-full flex-col overflow-hidden rounded-[22px]">
+      <TitleBar
+        d={d}
+        pinned={pinned}
+        onTogglePin={togglePin}
+        pinFailed={pinFailed}
+        lang={lang}
+        onLang={setLang}
+        onNavigate={navigate}
+        onInfo={setInfo}
+      />
 
       {demo && (
         <p className="mx-3 mt-2 rounded-lg border border-[var(--s-waiting)] px-3 py-1.5 text-center text-[11px] font-medium tracking-wide text-[var(--s-waiting)]">
@@ -167,7 +178,7 @@ function App() {
       )}
 
       {/* All views stay mounted so a draft or a loaded preview survives switching tabs. */}
-      <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+      <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         <div hidden={view !== "home"}>
           <HomeView
             d={d}
@@ -246,6 +257,8 @@ function App() {
       )}
 
       <NavBar d={d} view={view} onChange={navigate} dot={debugDot ? "debug" : null} />
+
+      {info && <InfoSheet d={d} kind={info} onClose={() => setInfo(null)} />}
 
       {askConsent && (
         <Consent d={d} onCancel={() => setAskConsent(false)} onAllow={() => void begin()} />
