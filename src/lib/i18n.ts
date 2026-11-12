@@ -87,6 +87,9 @@ export interface Dict {
   };
   menu: {
     language: string;
+    theme: string;
+    dark: string;
+    bright: string;
     privacy: string;
     terms: string;
     about: string;
@@ -458,6 +461,9 @@ const en: Dict = {
   },
   menu: {
     language: "Language",
+    theme: "Theme",
+    dark: "Dark · Cosmic Obsidian",
+    bright: "Bright · Arctic Titanium",
     privacy: "Privacy Policy",
     terms: "Terms of Use",
     about: "About SENTIQX",
@@ -1036,6 +1042,9 @@ const hinglish: Dict = {
   },
   menu: {
     language: "Bhasha",
+    theme: "Theme",
+    dark: "Dark · Cosmic Obsidian",
+    bright: "Bright · Arctic Titanium",
     privacy: "Privacy Policy",
     terms: "Terms of Use",
     about: "SENTIQX ke baare me",
