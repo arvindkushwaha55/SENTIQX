@@ -1,4 +1,12 @@
-import type { ActivityEvent, ErrorRecord, FeedItem, SessionState, Status, ToolKind } from "./types";
+import type {
+  ActivityEvent,
+  EngineState,
+  ErrorRecord,
+  FeedItem,
+  SessionState,
+  Status,
+  ToolKind,
+} from "./types";
 
 /**
  * Inactivity only ever produces a *suspected* stuck state. A long build or a long
@@ -9,6 +17,14 @@ export const STUCK_AFTER_MS_TOOL_RUNNING = 300_000;
 export const MAX_ERRORS = 20;
 export const MAX_FEED = 8;
 
+/**
+ * Bucket key for events that arrive without a session id. The Rust normaliser
+ * can emit an empty session id for unusual payloads; those events get their own
+ * anonymous bucket so they can never touch a real session's state.
+ */
+export const ANONYMOUS_SESSION = "__anonymous__";
+
+/** One session's fresh state. Also the shape every UI consumer reads. */
 export const initialState: SessionState = {
   monitor: "off",
   sessionActive: false,
@@ -27,6 +43,13 @@ export const initialState: SessionState = {
   activeError: null,
   lastToolStartAt: null,
   nextErrorId: 1,
+  ended: false,
+};
+
+export const initialEngineState: EngineState = {
+  monitor: "off",
+  sessions: {},
+  displayedId: null,
 };
 
 export type Action =
@@ -77,51 +100,25 @@ function feedItem(ev: ActivityEvent): FeedItem | null {
   }
 }
 
-export function reducer(s: SessionState, a: Action): SessionState {
-  const next = step(s, a);
-  if (a.type !== "event" || next === s) return next;
-  const item = feedItem(a.event);
-  const sessionId = a.event.sessionId || next.sessionId;
+/**
+ * Apply one event to ONE session's bucket, then maintain that bucket's feed.
+ * The per-event semantics are exactly the old single-session engine's; the
+ * multi-session safety comes from never letting an event touch another bucket.
+ */
+function applyEvent(bucket: SessionState, key: string, ev: ActivityEvent): SessionState {
+  const next = stepBucket(bucket, ev);
+  const item = feedItem(ev);
   return {
     ...next,
-    sessionId,
-    project: a.event.project || next.project,
+    sessionId: key === ANONYMOUS_SESSION ? null : key,
+    project: ev.project || next.project,
     feed: item ? [...next.feed, item].slice(-MAX_FEED) : next.feed,
+    ended: ev.kind === "session_end" ? true : next.ended,
   };
 }
 
-function step(s: SessionState, a: Action): SessionState {
-  if (a.type === "monitor") {
-    switch (a.action) {
-      case "start":
-        return { ...initialState, monitor: "on" };
-      case "stop":
-        return { ...initialState };
-      case "pause":
-        return s.monitor === "on" ? { ...s, monitor: "paused" } : s;
-      case "resume":
-        if (s.monitor !== "paused") return s;
-        // Events during the pause were not recorded, so live state may be stale.
-        // Drop it instead of guessing; counts and error history are kept.
-        return {
-          ...s,
-          monitor: "on",
-          turnActive: false,
-          turnStartedAt: null,
-          turnFinishedAt: null,
-          running: {},
-          waitingFor: null,
-          activeError: null,
-          lastEventAt: null,
-        };
-    }
-  }
-
-  // Events are ignored unless monitoring is on (pause really means not recording).
-  if (s.monitor !== "on") return s;
-
-  const ev = a.event;
-  const base: SessionState = { ...s, lastEventAt: ev.at };
+function stepBucket(s: SessionState, ev: ActivityEvent): SessionState {
+  const base: SessionState = { ...s, monitor: "on", lastEventAt: ev.at };
 
   switch (ev.kind) {
     case "session_start":
@@ -218,6 +215,101 @@ function step(s: SessionState, a: Action): SessionState {
         waitingFor: null,
       };
   }
+}
+
+/** Resume drops stale live state per bucket; counts and error history are kept. */
+function resumeBucket(s: SessionState): SessionState {
+  return {
+    ...s,
+    monitor: "on",
+    turnActive: false,
+    turnStartedAt: null,
+    turnFinishedAt: null,
+    running: {},
+    waitingFor: null,
+    activeError: null,
+    lastEventAt: null,
+  };
+}
+
+/** The still-active bucket with the most recent event, or null when none is active. */
+function mostRecentActive(sessions: Record<string, SessionState>): string | null {
+  let best: string | null = null;
+  let bestAt = -Infinity;
+  for (const [key, b] of Object.entries(sessions)) {
+    if (!b.sessionActive) continue;
+    const at = b.lastEventAt ?? 0;
+    if (at > bestAt) {
+      bestAt = at;
+      best = key;
+    }
+  }
+  return best;
+}
+
+export function engineReducer(s: EngineState, a: Action): EngineState {
+  if (a.type === "monitor") {
+    switch (a.action) {
+      case "start":
+        return { monitor: "on", sessions: {}, displayedId: null };
+      case "stop":
+        return { ...initialEngineState };
+      case "pause":
+        return s.monitor === "on" ? { ...s, monitor: "paused" } : s;
+      case "resume": {
+        if (s.monitor !== "paused") return s;
+        // Events during the pause were not recorded, so live state may be stale.
+        // Drop it instead of guessing, in every session bucket alike.
+        const sessions: Record<string, SessionState> = {};
+        for (const [key, b] of Object.entries(s.sessions)) sessions[key] = resumeBucket(b);
+        return { ...s, monitor: "on", sessions };
+      }
+    }
+  }
+
+  // Events are ignored unless monitoring is on (pause really means not recording).
+  if (s.monitor !== "on") return s;
+
+  const ev = a.event;
+  const key = ev.sessionId ? ev.sessionId : ANONYMOUS_SESSION;
+  const existing = s.sessions[key];
+
+  // A delayed event from an already-ended session must not reactivate it or
+  // steal the display. Only a genuinely fresh start (start/prompt) revives it,
+  // and then as a clean bucket.
+  if (existing?.ended && ev.kind !== "session_start" && ev.kind !== "prompt") return s;
+
+  const base: SessionState =
+    !existing || existing.ended ? { ...initialState, monitor: "on" } : existing;
+  const bucket = applyEvent(base, key, ev);
+  const sessions = { ...s.sessions, [key]: bucket };
+
+  let displayedId = s.displayedId;
+  if (bucket.sessionActive) {
+    // Most recent activity wins the display.
+    displayedId = key;
+  } else if (bucket.ended) {
+    // The displayed session just ended: fall back to another live session if
+    // one exists, otherwise keep showing the ended one (status derives null).
+    if (displayedId === key) displayedId = mostRecentActive(sessions) ?? key;
+  } else if (displayedId === null || !sessions[displayedId]?.sessionActive) {
+    // Evidence without an active session (e.g. an API error as a session's
+    // first seen event): show it when nothing live is on display, but never
+    // steal the display from a session that is actively working.
+    displayedId = key;
+  }
+  return { monitor: s.monitor, sessions, displayedId };
+}
+
+/**
+ * The SessionState the UI should show: the most recently active session's
+ * bucket, with the engine-wide monitor state applied. Every existing consumer
+ * (status, summary, notifications, views) keeps reading this shape unchanged.
+ */
+export function displayedSession(s: EngineState): SessionState {
+  const bucket = s.displayedId ? s.sessions[s.displayedId] : undefined;
+  if (!bucket) return { ...initialState, monitor: s.monitor };
+  return { ...bucket, monitor: s.monitor };
 }
 
 /** Returns null when there is no evidence for any status (never guesses). */
