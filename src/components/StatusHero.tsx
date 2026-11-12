@@ -48,7 +48,7 @@ export function StatusHero({
         <div className="min-w-0 flex-1">
           <Label>Status</Label>
           <p
-            className="mt-0.5 text-[21px] font-semibold leading-tight tracking-tight"
+            className="display mt-0.5 text-[21px] font-semibold leading-tight"
             style={{ color: "var(--c)" }}
             role="status"
             aria-live="polite"

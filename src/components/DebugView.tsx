@@ -106,7 +106,7 @@ export function DebugView({
   return (
     <div className="space-y-3">
       <div className="px-1">
-        <h2 className="text-[17px] font-semibold tracking-tight">{t.title}</h2>
+        <h2 className="display text-[18px] font-semibold tracking-tight">{t.title}</h2>
         <p className="mt-0.5 text-xs leading-relaxed text-[var(--muted)]">{t.subtitle}</p>
       </div>
 
@@ -256,7 +256,7 @@ function FindingCard({
       </p>
       <p className="selectable mt-1 text-[14px] font-medium leading-snug">{title}</p>
       {f.evidence && (
-        <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-[var(--bg0)] p-2 font-mono text-[11.5px] leading-relaxed">{f.evidence}</pre>
+        <pre className="codeblock mt-2 overflow-x-auto whitespace-pre-wrap break-words p-2 text-[11.5px]">{f.evidence}</pre>
       )}
 
       {open === "explain" && (

@@ -21,7 +21,7 @@ export function Consent({
       <div className="surface rise max-h-full w-full overflow-y-auto !border-[var(--line-strong)] !bg-[var(--bg1)] p-4">
         <div className="flex items-center gap-2 text-[var(--cyan)]">
           <ShieldIcon size={18} />
-          <h2 id="consent-title" className="text-[16px] font-semibold text-[var(--text)]">
+          <h2 id="consent-title" className="display text-[16px] font-semibold text-[var(--text)]">
             {d.consent.title}
           </h2>
         </div>

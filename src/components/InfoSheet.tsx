@@ -21,7 +21,7 @@ export function InfoSheet({ d, kind, onClose }: { d: Dict; kind: InfoKind; onClo
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+          <h2 className="display text-[15px] font-semibold tracking-tight">{title}</h2>
           <button type="button" className="winbtn" onClick={onClose} aria-label={d.info.close} title={d.info.close}>
             <CloseIcon size={15} />
           </button>

@@ -105,7 +105,7 @@ export function ErrorCard({ d, view }: { d: Dict; view: ErrorView }) {
       {view.details && (
         <details className="mt-3 text-xs text-[var(--muted)]">
           <summary className="cursor-pointer select-none hover:text-[var(--text)]">{d.error.details}</summary>
-          <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-[var(--bg0)] p-2 font-mono text-[11px] leading-relaxed">
+          <pre className="codeblock mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words p-2 text-[11px]">
             {view.details}
           </pre>
         </details>
@@ -201,7 +201,7 @@ export function PreviewCard({ d }: { d: Dict }) {
               placeholder={d.preview.urlPlaceholder}
               spellCheck={false}
               aria-label={d.preview.title}
-              className="min-w-0 flex-1 rounded-xl border border-[var(--line-strong)] bg-[var(--bg0)] px-3 py-2 font-mono text-[12px] text-[var(--text)] placeholder:text-[var(--faint)]"
+              className="field min-w-0 flex-1 px-3 py-2 font-mono text-[12px]"
             />
             <Button variant="ghost" onClick={load} disabled={!input.trim()}>
               {d.preview.load}

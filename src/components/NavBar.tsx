@@ -42,7 +42,7 @@ export function NavBar({
               <span
                 className={`relative grid h-10 w-10 place-items-center rounded-full border shadow-[0_6px_16px_var(--shadow)] transition-colors ${
                   active
-                    ? "border-[var(--orange)] bg-[var(--tint-orange)] text-[var(--orange)]"
+                    ? "dock-on border-[var(--orange)] bg-[var(--tint-orange)] text-[var(--orange)]"
                     : "border-[var(--line)] bg-[var(--dock-bg)] text-[var(--muted)] group-hover:text-[var(--text)]"
                 }`}
               >

@@ -61,7 +61,7 @@ export function TitleBar({
           aria-expanded={open}
         >
           <LogoMark size={17} />
-          <span className="font-mono text-[11px] font-semibold tracking-[0.24em]">SENTIQX</span>
+          <span className="display text-[11.5px] font-semibold tracking-[0.24em]">SENTIQX</span>
           <ChevronIcon size={13} className="text-[var(--muted)]" />
         </button>
         {open && (
