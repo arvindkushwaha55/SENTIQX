@@ -153,6 +153,37 @@ button:disabled {
   background: rgba(94, 231, 255, 0.1);
 }
 
+/* Brand pill in the title bar; opens the app menu (language, privacy, terms, about). */
+.brandpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(8, 12, 20, 0.5);
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+.brandpill:hover {
+  border-color: var(--line-strong);
+  background: rgba(20, 28, 44, 0.65);
+}
+
+.menupanel {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 8px);
+  z-index: 30;
+  width: 224px;
+  padding-bottom: 8px;
+  border-radius: 16px;
+  border: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, rgba(22, 30, 48, 0.98), rgba(11, 16, 27, 0.98));
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
 .dot {
   width: 7px;
   height: 7px;
