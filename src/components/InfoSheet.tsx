@@ -10,7 +10,7 @@ export function InfoSheet({ d, kind, onClose }: { d: Dict; kind: InfoKind; onClo
 
   return (
     <div
-      className="absolute inset-0 z-40 flex items-center justify-center bg-[rgba(3,5,9,0.62)] p-4"
+      className="absolute inset-0 z-40 flex items-center justify-center bg-[var(--overlay)] p-4"
       role="dialog"
       aria-modal="true"
       aria-label={title}
