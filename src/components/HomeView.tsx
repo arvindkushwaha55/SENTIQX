@@ -77,7 +77,7 @@ export function HomeView({ d, s, status, now, prefs, app, recent, awarenessFaile
   return (
     <div className="grid items-start gap-3 min-[620px]:grid-cols-[1.22fr_1fr]">
       <div className="space-y-3">
-      <p className="px-1 text-[17px] font-semibold tracking-tight">{greeting(new Date(now).getHours(), d)}</p>
+      <p className="display display-title px-1 font-semibold">{greeting(new Date(now).getHours(), d)}</p>
 
       {awarenessFailed && (
         <p className="px-1 text-xs text-[var(--s-error)]" role="alert">
@@ -89,7 +89,7 @@ export function HomeView({ d, s, status, now, prefs, app, recent, awarenessFaile
         <section className="hero rise p-4" data-status="working">
           <div className="flex items-center gap-2 text-[var(--cyan)]">
             <ShieldIcon size={17} />
-            <h2 className="text-[15px] font-semibold text-[var(--text)]">{t.permission.title}</h2>
+            <h2 className="display text-[15px] font-semibold text-[var(--text)]">{t.permission.title}</h2>
           </div>
           <p className="mt-1.5 text-[13px] leading-snug text-[var(--muted)]">{t.permission.body}</p>
           <ul className="mt-3 space-y-1.5">
@@ -235,7 +235,7 @@ function ActiveAppCard({
       <div className="flex items-center gap-3">
         <AppTile category={app.category} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[16px] font-semibold tracking-tight" title={app.name} aria-live="polite">
+          <p className="display truncate text-[16px] font-semibold tracking-tight" title={app.name} aria-live="polite">
             {app.name}
           </p>
           <p className="mt-0.5 text-xs text-[var(--muted)]">{t.categories[app.category]}</p>
