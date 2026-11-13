@@ -2,6 +2,8 @@
 
 **Your AI works. SENTIQX understands.**
 
+[![CI](https://github.com/arvindkushwaha55/SENTIQX/actions/workflows/ci.yml/badge.svg)](https://github.com/arvindkushwaha55/SENTIQX/actions/workflows/ci.yml)
+
 SENTIQX is a floating Windows desktop companion. It shows which application you are in, explains in simple English or Hinglish what your AI coding assistant is really doing, and never pretends to know more than it does.
 
 > **Status:** early development, Windows only. See [docs/LIMITATIONS.md](docs/LIMITATIONS.md) for what is verified and what is not.
@@ -20,6 +22,7 @@ SENTIQX is a floating Windows desktop companion. It shows which application you 
 | **Smart Debug** | Code you select in VS Code is checked by local rules and the editor's own diagnostics. An optional AI review runs through your own Claude login, only when you click, with secrets hidden first; a suggested fix needs your approval here and again inside VS Code, and is never saved automatically. |
 | **Session history** | Stored locally in SQLite, with delete one and delete all. |
 | **Floating window** | Native always-on-top with pin/unpin, drag, resize, hide to tray, and remembered position and size. |
+| **Two themes** | Dark "Cosmic Obsidian" and bright "Arctic Titanium", switchable from the logo menu and remembered between runs. |
 | **Two languages** | English or Hinglish, one at a time. |
 
 ## Honesty rules
@@ -40,7 +43,7 @@ It never invents progress percentages, completed work or fixes. Predictions are 
 - From Claude Code hooks it keeps only event names, tool names, status, the session ID, the folder's name and a shortened error message. Prompts, commands and file contents are never read.
 - History stores tool names, counts, error types, times and the folder name. It never stores raw error text.
 - Pasted chats stay in memory and are analysed on your computer. A summary is saved only if you click save.
-- Nothing is sent to any AI service or external server by these features.
+- Nothing is sent to any AI service or external server by these features. The one exception is Smart Debug's optional AI review: only when you click it, your selected code — with secrets hidden first — is reviewed through your own Claude login.
 - Secret hiding in pasted text is best effort, not a guarantee, so review the text first.
 
 ### What "Connect Claude Code" changes
@@ -72,6 +75,12 @@ pnpm tauri build --no-bundle
 
 The app is created at `src-tauri\target\release\sentiqx.exe`. It runs on its own, without a dev server.
 
+### Smart Debug in VS Code
+
+Smart Debug needs the companion extension from the `vscode-extension/` folder. Install it in VS Code with "Extensions: Install from VSIX..." when a packaged `.vsix` is available, or run the folder in an Extension Development Host while developing. The extension activates when VS Code starts and asks for your permission inside VS Code before sending anything.
+
+Then, in SENTIQX, open the **Debug** tab and follow its setup steps. In VS Code, select code and run **SENTIQX: Analyse Selection** from the Command Palette. Results appear in the Debug tab; a suggested fix must be approved in SENTIQX and confirmed again in VS Code, and the extension never saves the file for you. Automatic suggestions on save are off by default (**SENTIQX: Turn Automatic Suggestions On or Off**).
+
 ## Tests
 
 ```powershell
@@ -80,6 +89,7 @@ pnpm exec tsc --noEmit                # type check
 cd src-tauri
 cargo test --lib                      # backend
 cargo test --test real_claude -- --ignored --test-threads=1   # uses your real Claude login
+cargo test --test debug_ai_real -- --ignored                  # Smart Debug review, same login
 ```
 
 ## Tech stack
@@ -90,11 +100,14 @@ Tauri 2, Rust, React, TypeScript, Tailwind CSS and SQLite.
 
 ```text
 src/
-  components/         UI: Home, Claude, Intel, History, Settings, title bar
+  components/         UI: Home, Live, Debug, Intel, Guard, History, Settings, title bar, dock
   lib/engine.ts       Status engine (events to the five statuses)
   lib/summary.ts      Three-line summaries and error explanations
   lib/appContext.ts   What can honestly be said about the active app
   lib/comms/          Communication Intelligence (parse, redact, analyse)
+  lib/intentGuard.ts  Intent Guard classification rules
+  lib/zones.ts        Workspace zone geometry
+  lib/debug/          Smart Debug rules, AI-answer checks and diffs
   lib/i18n.ts         English and Hinglish text
 src-tauri/src/
   active_window.rs    Active application detection (Win32)
@@ -107,6 +120,7 @@ src-tauri/src/
   editor.rs           Smart Debug: editor context and approved fixes
   debug_ai.rs         Smart Debug: optional AI review via your own Claude login
   lifecycle.rs        Small local lifecycle log (Connect, Stop, Pin...)
+vscode-extension/     Smart Debug companion extension for VS Code
 docs/LIMITATIONS.md   What is verified, and what is not
 ```
 
