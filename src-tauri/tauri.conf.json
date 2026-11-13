@@ -17,7 +17,7 @@
         "width": 600,
         "height": 380,
         "minWidth": 350,
-        "minHeight": 300,
+        "minHeight": 250,
         "resizable": true,
         "decorations": false,
         "shadow": true,
