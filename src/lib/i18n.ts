@@ -122,7 +122,7 @@ export interface Dict {
     allow: string;
     cancel: string;
   };
-  labels: { now: string; done: string; next: string };
+  labels: { now: string; done: string; next: string; status: string };
   line1: {
     off: string;
     paused: string;
@@ -311,6 +311,7 @@ export interface Dict {
     dismiss: string;
     fineSaved: string;
     secretsNote: (n: number) => string;
+    privacyTitle: string;
     privacyLines: string[];
   };
   debug: {
@@ -526,7 +527,7 @@ const en: Dict = {
     allow: "Allow and start",
     cancel: "Cancel",
   },
-  labels: { now: "Now", done: "Completed", next: "Next" },
+  labels: { now: "Now", done: "Completed", next: "Next", status: "Status" },
   line1: {
     off: "Monitoring is off.",
     paused: "Monitoring is paused.",
@@ -805,6 +806,7 @@ const en: Dict = {
     dismiss: "Dismiss",
     fineSaved: "Saved. This intent + destination pair will not warn again.",
     secretsNote: (n) => `${n} secret-looking ${n === 1 ? "item was" : "items were"} hidden before checking. The original text is never stored.`,
+    privacyTitle: "Privacy",
     privacyLines: [
       "Guard only checks text you paste or copy yourself. It never reads WhatsApp, email or any other app.",
       "The check runs on this computer, with simple rules — no AI model, nothing sent anywhere.",
@@ -1107,7 +1109,7 @@ const hinglish: Dict = {
     allow: "Allow karo aur shuru karo",
     cancel: "Cancel",
   },
-  labels: { now: "Abhi", done: "Complete", next: "Aage" },
+  labels: { now: "Abhi", done: "Complete", next: "Aage", status: "Haalat" },
   line1: {
     off: "Monitoring band hai.",
     paused: "Monitoring paused hai.",
@@ -1387,6 +1389,7 @@ const hinglish: Dict = {
     dismiss: "Band karo",
     fineSaved: "Save ho gaya. Is intent + destination pair par ab warning nahi aayegi.",
     secretsNote: (n) => `Check se pehle ${n} secret jaisi ${n === 1 ? "cheez chhupayi gayi" : "cheezein chhupayi gayin"}. Asli text kabhi save nahi hota.`,
+    privacyTitle: "Privacy",
     privacyLines: [
       "Guard sirf wahi text check karta hai jo tum khud paste ya copy karte ho. Ye WhatsApp, email ya koi aur app kabhi nahi padhta.",
       "Check isi computer par hota hai, simple rules se — koi AI model nahi, kuch kahin bheja nahi jata.",
