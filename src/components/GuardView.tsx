@@ -254,7 +254,7 @@ export function GuardView({ d, app }: { d: Dict; app: ActiveApp | null }) {
       <Card>
         <div className="flex items-center gap-2 text-[var(--cyan)]">
           <ShieldIcon size={15} />
-          <Label className="!text-[var(--cyan)]">Privacy</Label>
+          <Label className="!text-[var(--cyan)]">{t.privacyTitle}</Label>
         </div>
         <ul className="mt-2.5 space-y-2">
           {t.privacyLines.map((line) => (
