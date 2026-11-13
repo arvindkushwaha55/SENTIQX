@@ -16,7 +16,7 @@
         "title": "SENTIQX",
         "width": 600,
         "height": 380,
-        "minWidth": 470,
+        "minWidth": 350,
         "minHeight": 300,
         "resizable": true,
         "decorations": false,
