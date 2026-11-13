@@ -46,7 +46,7 @@ export function StatusHero({
       <div className="flex items-center gap-4">
         <Orb status={s.monitor === "on" ? status : null} />
         <div className="min-w-0 flex-1">
-          <Label>Status</Label>
+          <Label>{d.labels.status}</Label>
           <p
             className="display mt-0.5 text-[21px] font-semibold leading-tight"
             style={{ color: "var(--c)" }}

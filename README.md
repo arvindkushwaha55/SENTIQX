@@ -17,6 +17,7 @@ SENTIQX is a floating Windows desktop companion. It shows which application you 
 | **Intent Guard** | Check a message before it goes to the wrong app. You paste or copy the text yourself; Guard compares its shape (development prompt, formal email, personal note, secret-like) with the active app's category and only warns — it never sends, blocks or edits. See [docs/INTENT_GUARD.md](docs/INTENT_GUARD.md). |
 | **Workspace zones** | Splits the screen into 2 halves or 4 quadrants and shows which app sits in the zone where SENTIQX is placed, with a mini grid of all zones. Opt-in, on top of app detection; a shared zone is shown as not clear instead of a guess. See [docs/ZONES.md](docs/ZONES.md). |
 | **Live preview** | Shows your real local dev server (`localhost` only) inside the panel. |
+| **Smart Debug** | Code you select in VS Code is checked by local rules and the editor's own diagnostics. An optional AI review runs through your own Claude login, only when you click, with secrets hidden first; a suggested fix needs your approval here and again inside VS Code, and is never saved automatically. |
 | **Session history** | Stored locally in SQLite, with delete one and delete all. |
 | **Floating window** | Native always-on-top with pin/unpin, drag, resize, hide to tray, and remembered position and size. |
 | **Two languages** | English or Hinglish, one at a time. |
@@ -103,6 +104,9 @@ src-tauri/src/
   history.rs          SQLite session history
   privacy.rs          Saved permission choices
   window.rs           Pin, tray and show/hide
+  editor.rs           Smart Debug: editor context and approved fixes
+  debug_ai.rs         Smart Debug: optional AI review via your own Claude login
+  lifecycle.rs        Small local lifecycle log (Connect, Stop, Pin...)
 docs/LIMITATIONS.md   What is verified, and what is not
 ```
 
@@ -115,4 +119,4 @@ docs/LIMITATIONS.md   What is verified, and what is not
 
 ## License
 
-No license has been chosen yet. All rights reserved by the author.
+MIT — see [LICENSE](LICENSE).

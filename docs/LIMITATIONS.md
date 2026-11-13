@@ -2,6 +2,12 @@
 
 Last checked on 4 November 2026 against Claude Code 2.1.317 on Windows 11 with the release build.
 
+Addendum, 13 November 2026: Intent Guard, Workspace Zones, Smart Debug, the
+multi-session engine fix and the landscape dual-theme interface have landed
+since the checks below. The real-app and real-CLI verification tables still
+date from 4 November; nothing below has been re-verified on a real machine
+since then, and the Smart Debug section states its own evidence level.
+
 ## How the app gets its information
 
 **Active application.** Documented Win32 calls (`GetForegroundWindow`, `QueryFullProcessImageNameW`, `GetWindowTextW`), polled every 0.7 seconds while detection is on. This gives the app's name and, if you allow it, the window title. It does not give the app's content. Windows UI Automation could read content from some apps, but SENTIQX does not use it yet.
@@ -63,6 +69,17 @@ These use `claude -p`, not the VS Code panel. Run them with `cargo test --test r
 - The live preview needs a local address typed in by hand. A page that blocks embedding stays blank.
 - Workspace zones come from window rectangles only: Windows does not expose snap-layout state to apps, minimised windows vanish from their zone, only the monitor SENTIQX sits on is mapped, and a zone shared almost equally by two windows is reported as not clear rather than guessed.
 - WebView2 is what uses most of the memory.
+
+## Smart Debug
+
+Smart Debug landed on 11 November 2026. Its parts are covered by unit and
+integration tests: local rules and AI-answer validation, the editor bridge
+in Rust, and a real-Claude review test file that runs only when invoked
+(four tests passed when last run on the developer's machine). The full
+end-to-end flow inside VS Code - send a selection, receive diagnostics,
+approve and apply a fix, undo it - has not yet been run start to finish,
+and the VS Code extension is not yet packaged as a .vsix. Treat Smart
+Debug as built and unit-tested, not yet proven end to end.
 
 ## Communication Intelligence is not AI yet
 
