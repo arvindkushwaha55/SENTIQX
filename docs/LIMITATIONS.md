@@ -8,6 +8,23 @@ since the checks below. The real-app and real-CLI verification tables still
 date from 4 November; nothing below has been re-verified on a real machine
 since then, and the Smart Debug section states its own evidence level.
 
+Second addendum, 16 November 2026: on 13 November 2026 the current main
+was run on the developer's real Windows laptop. The full frontend test
+suite passed there (157 tests across 9 files). The dev build launched and
+rendered the current interface on real Windows (dark theme, Hinglish,
+live app detection naming Brave with its honest limits). A release build
+(tauri build --no-bundle) succeeded, and the standalone exe launched with
+no terminal attached, detected File Explorer live, and showed the full
+navigation dock. Window defaults are now 600x380 with minimums of 350
+wide and 250 high (chosen on that laptop); a machine that ran an older
+build restores its saved size until it is resized. One correction to the
+Smart Debug section below: the VS Code extension has since been packaged
+as sentiqx-vscode-0.1.0.vsix (13 November 2026); its end-to-end flow
+inside VS Code is still not run. Everything in the "Not verified yet"
+list remains unverified, including a real click on the tray icon,
+PermissionRequest in a real session, notifications on screen from the
+exe, the VS Code panel flow, and zones on a real split-screen desktop.
+
 ## How the app gets its information
 
 **Active application.** Documented Win32 calls (`GetForegroundWindow`, `QueryFullProcessImageNameW`, `GetWindowTextW`), polled every 0.7 seconds while detection is on. This gives the app's name and, if you allow it, the window title. It does not give the app's content. Windows UI Automation could read content from some apps, but SENTIQX does not use it yet.
